@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rodstar_sandbox_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: rodstar_payops_sandbox
+    ports:
+      - "5432:5432"
+    volumes:
+      - sandbox_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rodstar_payops_sandbox"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: rodstar_sandbox_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: rodstar_sandbox_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP port
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rodstar_sandbox_backend
+    environment:
+      APP_NAME: "Rodstar PayOps [Sandbox]"
+      APP_ENV: sandbox
+      DEBUG: "true"
+      SECRET_KEY: "sandbox-insecure-secret-key-for-local-testing-only-123456"
+      CREDENTIALS_ENCRYPTION_KEY: "Wb0T3r_G3Z1Zf1fWj_Wz2X4y6z8A0b1C2d3E4F5g6H8="
+      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@db:5432/rodstar_payops_sandbox
+      DATABASE_URL_SYNC: postgresql+psycopg2://postgres:postgrespassword@db:5432/rodstar_payops_sandbox
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  sandbox_postgres_data:
