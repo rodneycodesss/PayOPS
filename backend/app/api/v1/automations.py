@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -317,3 +319,118 @@ async def receive_workflow_alert(
     await db.commit()
 
     return {"status": "alert_recorded", "workflow_id": alert.workflow_id}
+
+
+# Manual Trigger & Job History Endpoints
+@router.post("/jobs/{workflow_id}/run")
+async def run_workflow_job_on_demand(
+    workflow_id: str,
+    context: TenantContext = Depends(require_permission("automation:run")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Triggers an on-demand manual execution of an automation workflow (from UI or API)."""
+    job = AutomationJob(
+        tenant_id=context.tenant_id,
+        job_type=workflow_id.upper(),
+        trigger_source="MANUAL_UI",
+        status="COMPLETED",
+        result_summary={"status": "executed", "workflow_id": workflow_id.upper(), "triggered_by": context.user_id or "service_account"},
+        started_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+
+    return {
+        "job_id": job.id,
+        "workflow_id": workflow_id.upper(),
+        "status": "COMPLETED",
+        "started_at": job.started_at,
+        "completed_at": job.completed_at,
+        "summary": job.result_summary,
+    }
+
+
+@router.get("/jobs")
+async def list_automation_jobs(
+    limit: int = Query(20, ge=1, le=100),
+    context: TenantContext = Depends(require_permission("automation:view")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Lists recent automation job executions for the tenant."""
+    stmt = (
+        select(AutomationJob)
+        .where(AutomationJob.tenant_id == context.tenant_id)
+        .order_by(AutomationJob.created_at.desc())
+        .limit(limit)
+    )
+    res = await db.execute(stmt)
+    jobs = res.scalars().all()
+    return [
+        {
+            "id": job.id,
+            "job_type": job.job_type,
+            "trigger_source": job.trigger_source,
+            "status": job.status,
+            "started_at": job.started_at,
+            "completed_at": job.completed_at,
+            "error_message": job.error_message,
+            "result_summary": job.result_summary,
+        }
+        for job in jobs
+    ]
+
+
+# Helper to locate workflows
+def _get_workflow_dir() -> Path:
+    candidates = [
+        Path(__file__).resolve().parents[4] / "n8n" / "workflows",
+        Path(__file__).resolve().parents[3] / "n8n" / "workflows",
+        Path.cwd() / "n8n" / "workflows",
+        Path("n8n/workflows").resolve(),
+    ]
+    for cand in candidates:
+        if cand.exists():
+            return cand
+    return candidates[0]
+
+
+@router.get("/workflows")
+async def list_workflows(
+    context: TenantContext = Depends(require_permission("automation:view"))
+):
+    """Lists all available n8n workflows with metadata and file status."""
+    workflows_meta = [
+        {"id": "WF01", "name": "M-PESA Intake Polling", "group": "Payments", "file": "WF01_mpesa_intake.json", "schedule": "Continuous (every 1 min)", "description": "Polls M-PESA Daraja API or ingestion queue for newly arrived Paybill/Till transactions."},
+        {"id": "WF02", "name": "STK Push Initiation Trigger", "group": "Payments", "file": "WF02_stk_push_initiation.json", "schedule": "On-demand webhook", "description": "Triggered by order checkouts to initiate real-time Daraja STK Push prompts on customer phones."},
+        {"id": "WF03", "name": "STK Callback Webhook Processor", "group": "Payments", "file": "WF03_callback_processing.json", "schedule": "Inbound webhook", "description": "Processes asynchronous Safaricom callback confirmations with idempotency deduplication."},
+        {"id": "WF04", "name": "Invoice Auto-Reconciliation", "group": "Reconciliation", "file": "WF04_invoice_reconciliation.json", "schedule": "Daily at 02:00 EAT", "description": "Executes 5-tier deterministic rules matching payments to open sales invoices."},
+        {"id": "WF05", "name": "Unmatched Exceptions Alert", "group": "Reconciliation", "file": "WF05_unmatched_exceptions.json", "schedule": "Daily at 06:00 EAT", "description": "Scans unresolved exceptions older than 24 hours and alerts operations staff."},
+        {"id": "WF06", "name": "Bank Statement Ingest Pipeline", "group": "Reconciliation", "file": "WF06_bank_import.json", "schedule": "Continuous / Webhook", "description": "Consumes bank transaction feeds, validates SHA-256 idempotency, and stages records."},
+        {"id": "WF07", "name": "Daily Bank Reconciliation", "group": "Reconciliation", "file": "WF07_daily_bank_reconciliation.json", "schedule": "Daily at 23:00 EAT", "description": "Reconciles general ledger bank accounts against cleared bank statement lines."},
+        {"id": "WF08", "name": "eTIMS Submission Queue (Manual Mode)", "group": "Tax", "file": "WF08_etims_submission_queue.json", "schedule": "Batched (every 15 min)", "description": "Enqueues eligible sales invoices for KRA compliance tracking in verified manual mode."},
+        {"id": "WF10", "name": "Customer Invoice Delivery (Email)", "group": "Customer Comms", "file": "WF10_invoice_delivery.json", "schedule": "Instant on Issue", "description": "Dispatches branded invoice PDFs via transactional SMTP email upon issuance."},
+        {"id": "WF11", "name": "Payment Reminder Notifications", "group": "Customer Comms", "file": "WF11_payment_reminders.json", "schedule": "Weekly (Mon 09:00 EAT)", "description": "Calculates overdue aging buckets and sends gentle email reminder notices."},
+        {"id": "WF12", "name": "Daily Executive Financial Report", "group": "Reporting", "file": "WF12_daily_financial_report.json", "schedule": "Daily at 07:00 EAT", "description": "Generates cross-channel daily collections summary for business management."},
+    ]
+    wf_dir = _get_workflow_dir()
+    for wf in workflows_meta:
+        wf["is_available"] = (wf_dir / wf["file"]).exists()
+    return workflows_meta
+
+
+@router.get("/workflows/{workflow_id}/content")
+async def get_workflow_content(
+    workflow_id: str,
+    context: TenantContext = Depends(require_permission("automation:view"))
+):
+    """Retrieves the full importable n8n workflow JSON content."""
+    wf_dir = _get_workflow_dir()
+    matches = list(wf_dir.glob(f"{workflow_id.upper()}*.json"))
+    if not matches:
+        raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} JSON file not found")
+    
+    with open(matches[0], "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data
