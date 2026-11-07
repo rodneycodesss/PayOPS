@@ -20,6 +20,7 @@ from app.models.reconciliation import (
 from app.models.accounting import ChartOfAccounts, JournalEntry, LedgerEntry
 from app.models.tax import TaxConfiguration, TaxSubmission
 from app.models.notifications import Notification, AutomationJob
+from app.models.api_keys import ApiKey
 
 __all__ = [
     "Base",
@@ -54,4 +55,5 @@ __all__ = [
     "TaxSubmission",
     "Notification",
     "AutomationJob",
+    "ApiKey",
 ]

@@ -1,0 +1,116 @@
+{
+  "name": "WF06: Bank Statement Ingest Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bank-feed-ingest",
+        "options": {}
+      },
+      "id": "webhook-bank-feed",
+      "name": "Incoming Bank Feed Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/v1/automations/banking/process",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.PAYOPS_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 5000
+        }
+      },
+      "id": "http-process-bank",
+      "name": "Process Bank Statements in Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/v1/automations/alerts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.PAYOPS_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "WF06"
+            },
+            {
+              "name": "error_message",
+              "value": "={{$json.message || 'Bank statement processing failed after retries'}}"
+            },
+            {
+              "name": "attempt_count",
+              "value": 3
+            }
+          ]
+        }
+      },
+      "id": "alert-on-failure",
+      "name": "Alert on Final Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 420]
+    }
+  ],
+  "connections": {
+    "Incoming Bank Feed Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Bank Statements in Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Bank Statements in Backend": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Alert on Final Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

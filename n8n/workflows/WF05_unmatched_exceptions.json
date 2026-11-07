@@ -1,0 +1,139 @@
+{
+  "name": "WF05: Unmatched Exceptions Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-daily-6am",
+      "name": "Trigger Daily at 06:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://backend:8000/api/v1/automations/reconciliation/exceptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.PAYOPS_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3
+        }
+      },
+      "id": "http-get-exceptions",
+      "name": "Fetch Open Reconciliation Exceptions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.open_exceptions_count}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-exceptions-exist",
+      "name": "Are Exceptions Open?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/v1/automations/alerts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.PAYOPS_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "WF05"
+            },
+            {
+              "name": "error_message",
+              "value": "={{$json.open_exceptions_count}} ambiguous reconciliation exceptions require manual finance review."
+            }
+          ]
+        }
+      },
+      "id": "alert-finance-team",
+      "name": "Alert Finance Team",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 260]
+    }
+  ],
+  "connections": {
+    "Trigger Daily at 06:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Fetch Open Reconciliation Exceptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Open Reconciliation Exceptions": {
+      "main": [
+        [
+          {
+            "node": "Are Exceptions Open?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Are Exceptions Open?": {
+      "main": [
+        [
+          {
+            "node": "Alert Finance Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
