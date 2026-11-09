@@ -52,3 +52,18 @@ This document tracks all key technical choices, financial correctness policies, 
 3. **Notification Channels:** Phase 1 and Release 1 wire transactional email (SMTP with configurable relay; e.g. Amazon SES, Postmark, Mailgun) as primary. SMS channel architecture is designed with pluggable adapters (e.g. Africa's Talking) allowing tenants to opt-in or activate per business preference.
 4. **Brand & Design Identity:** Modern fintech aesthetic featuring Rodstar Deep Navy (`#0B192C` / `#0F172A`), Emerald Green accent (`#10B981`), refined slate neutral backgrounds, high-contrast accessible data tables, and professional metric charts.
 5. **KRA eTIMS Strategy:** Release 1 keeps eTIMS in explicit manual review mode. Invoices can be marked as "manually recorded" with audit references, actor tracking, and timestamp. The `TaxAuthorityProvider` interface is implemented with a `NotConfigured` and `ManualReviewAdapter`, allowing live OSCU/VSCU adapters to be plugged in later without altering any core invoicing or ledger logic. No invoice will ever be stamped as "accepted by KRA" without authenticated cryptographic provider verification.
+
+
+---
+
+## Decision 008: Scoped API Key Authentication (`rpo_live_...`) for n8n Service Accounts
+- **Context:** Automated orchestrators (n8n, cron workers) need headless authentication without interactive login or user refresh tokens.
+- **Decision:** Implemented cryptographically secure API keys prefixed with `rpo_live_`. Keys are displayed once upon generation and hashed with SHA-256 (`key_hash`) at rest. Each key is bound to a tenant and an explicit list of granted permission scopes (`automation:run`, `payment:record`, etc.). Requests provide `X-API-Key: rpo_live_...`, which FastAPI's `get_tenant_context` verifies fail-closed.
+- **Consequences:** Safe headless access adhering strictly to least privilege.
+
+---
+
+## Decision 009: Bank Statement Deduplication via SHA-256 Row Hashing
+- **Context:** Kenyan businesses repeatedly upload monthly or weekly CSV bank statements containing overlapping transaction lines. Duplicate imports corrupt balances and double-credit customers.
+- **Decision:** Every ingested bank statement line calculates a deterministic SHA-256 hash from `(bank_account_id, tx_date, reference, amount, tx_type)`. The database schema enforces a tenant-scoped unique constraint `uq_bank_transactions_tenant_row_hash`. The importer skips duplicate rows, safely catches and logs malformed lines without crashing, and updates the account balance accurately.
+- **Consequences:** Re-importing the same CSV is 100% idempotent with zero duplicate ledger impact.
