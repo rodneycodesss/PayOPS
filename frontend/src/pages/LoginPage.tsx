@@ -47,6 +47,17 @@ export const LoginPage: React.FC = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
         <div className="bg-[#0B192C] py-8 px-6 shadow-2xl rounded-2xl border border-[#1E2E48]">
+          {/* Public Staging Credentials Notice */}
+          <div className="mb-5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start space-x-2 text-xs text-emerald-300">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-white">Public Test Account Pre-filled:</span>
+              <div className="font-mono text-[11px] text-emerald-200 mt-0.5">
+                rodney@rodstartechdevs.co.ke / SecureRodstar2026!
+              </div>
+            </div>
+          </div>
+
           <form className="space-y-5" onSubmit={handleSubmit}>
             {error && (
               <div className="p-3 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 text-xs">
