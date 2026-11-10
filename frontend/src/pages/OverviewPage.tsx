@@ -12,6 +12,22 @@ export const OverviewPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasRealData, setHasRealData] = useState(false);
 
+  const getTimeBasedGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const [greeting, setGreeting] = useState<string>(getTimeBasedGreeting);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGreeting(getTimeBasedGreeting());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [stats, setStats] = useState({
     collectedToday: '184,500',
     outstanding: '912,300',
@@ -186,7 +202,7 @@ export const OverviewPage: React.FC = () => {
             })}
           </div>
           <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight mt-0.5">
-            Good morning, {user?.full_name?.split(' ')[0] || 'User'}
+            {greeting}, {user?.full_name?.split(' ')[0] || 'User'}
           </h1>
         </div>
 
