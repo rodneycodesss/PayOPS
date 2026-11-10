@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, ShieldCheck, Key } from 'lucide-react';
+import { Lock, Mail, Key, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 import { Logo } from '../components/Logo';
 
@@ -35,109 +35,129 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0F1D] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center flex flex-col items-center">
-        <Logo variant="full" size="xl" className="justify-center mb-1" />
-        <p className="mt-2 text-xs text-slate-400">
-          Intelligent Payment Operations & Double-Entry Financial SaaS
-        </p>
+    <div className="min-h-screen flex flex-col lg:flex-row font-sans selection:bg-[#16A6D9] selection:text-slate-950">
+      {/* Left Column (Midnight Dark - Page 3) */}
+      <div className="lg:w-1/2 bg-[#080D18] text-white p-8 sm:p-16 flex flex-col justify-between min-h-[400px] lg:min-h-screen border-r border-slate-900">
+        <Link to="/" className="inline-block">
+          <Logo variant="full" size="md" />
+        </Link>
+
+        <div className="my-16 lg:my-0 space-y-6">
+          <h1 className="text-6xl sm:text-7xl lg:text-8xl font-extrabold tracking-tight text-white leading-none">
+            Welcome<br />
+            back<span className="text-[#16A6D9]">.</span>
+          </h1>
+          <p className="text-lg text-slate-300 max-w-sm">
+            Your payments, reconciliations and books are waiting.
+          </p>
+        </div>
+
+        {/* Mini Cyan Bar Visual (Page 3) */}
+        <div className="flex items-end space-x-2.5 h-16 pt-4">
+          <div className="w-4 bg-[#16A6D9]/30 rounded-t h-6"></div>
+          <div className="w-4 bg-[#16A6D9]/40 rounded-t h-10"></div>
+          <div className="w-4 bg-[#16A6D9]/30 rounded-t h-5"></div>
+          <div className="w-4 bg-[#16A6D9]/60 rounded-t h-12"></div>
+          <div className="w-4 bg-[#16A6D9]/70 rounded-t h-14"></div>
+          <div className="w-4 bg-[#16A6D9] rounded-t h-16"></div>
+          <div className="w-4 bg-[#16A6D9] rounded-t h-16"></div>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="bg-[#0B192C] py-8 px-6 shadow-2xl rounded-2xl border border-[#1E2E48]">
-          {/* Public Staging Credentials Notice */}
-          <div className="mb-5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start space-x-2 text-xs text-emerald-300">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+      {/* Right Column (White Form - Page 3) */}
+      <div className="lg:w-1/2 bg-white text-slate-900 p-8 sm:p-16 lg:p-24 flex flex-col justify-center">
+        <div className="max-w-md w-full mx-auto space-y-8">
+          <div>
+            <h2 className="text-4xl font-extrabold text-slate-950 tracking-tight">
+              Log in
+            </h2>
+          </div>
+
+          {/* Public Test Account Pre-filled notice */}
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start space-x-2 text-xs text-slate-700">
+            <ShieldCheck className="w-4 h-4 text-[#16A6D9] shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold text-white">Public Test Account Pre-filled:</span>
-              <div className="font-mono text-[11px] text-emerald-200 mt-0.5">
+              <span className="font-semibold text-slate-900">Public Test Account Pre-filled:</span>
+              <div className="font-mono text-[11px] text-slate-600 mt-0.5">
                 rodney@rodstartechdevs.co.ke / SecureRodstar2026!
               </div>
             </div>
           </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-3 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 text-xs">
-                {error}
-              </div>
-            )}
+          {error && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-6">
             {!mfaRequired ? (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Email Address
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Work email
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Mail className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white text-sm focus:outline-none focus:border-emerald-500 transition"
-                      placeholder="finance@yourbusiness.co.ke"
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@business.co.ke"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] focus:ring-2 focus:ring-[#16A6D9]/20 transition text-slate-900"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Password
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white text-sm focus:outline-none focus:border-emerald-500 transition"
-                      placeholder="••••••••••••"
-                    />
-                  </div>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Your password"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] focus:ring-2 focus:ring-[#16A6D9]/20 transition text-slate-900"
+                  />
                 </div>
               </>
             ) : (
               <div>
-                <label className="block text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-sm font-medium text-slate-900 mb-2">
                   Enter 6-Digit TOTP Authenticator Code
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                    <Key className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value)}
-                    required
-                    className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-[#0E1E35] border border-amber-500/50 text-white font-mono text-center tracking-widest text-lg"
-                    placeholder="123456"
-                  />
-                </div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                  placeholder="123456"
+                  className="w-full px-4 py-3 rounded-xl border border-[#16A6D9] focus:outline-none focus:ring-2 focus:ring-[#16A6D9]/20 text-center font-mono text-xl tracking-widest text-slate-900"
+                />
               </div>
             )}
+
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>Two-factor code asked next</span>
+              <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Please contact system administrator to reset password.'); }} className="text-[#16A6D9] hover:underline font-medium">
+                Forgot password?
+              </a>
+            </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/25 disabled:opacity-50"
+              className="w-full py-4 px-6 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-base transition shadow-xl disabled:opacity-50"
             >
-              <span>{isSubmitting ? 'Authenticating...' : mfaRequired ? 'Verify TOTP' : 'Sign in to PayOps'}</span>
-              <ArrowRight className="w-4 h-4" />
+              {isSubmitting ? 'Authenticating...' : mfaRequired ? 'Verify code' : 'Log in'}
             </button>
 
-            <div className="pt-2 text-center text-xs text-slate-400">
-              Need to onboard a new business?{' '}
-              <Link to="/register" className="text-emerald-400 hover:underline font-medium">
-                Register Tenant Organization
+            <div className="pt-2 text-sm text-slate-500">
+              New business?{' '}
+              <Link to="/early-access" className="text-[#16A6D9] font-semibold hover:underline">
+                Join early access
               </Link>
             </div>
           </form>
