@@ -35,19 +35,37 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cached = localStorage.getItem('user_profile');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [tenant, setTenant] = useState<Tenant | null>(() => {
+    try {
+      const cached = localStorage.getItem('tenant_profile');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(!user);
 
   const fetchProfile = async () => {
     try {
       const userData = await apiRequest<User>('/auth/me');
       setUser(userData);
+      localStorage.setItem('user_profile', JSON.stringify(userData));
       const tenantData = await apiRequest<Tenant>('/tenants/me');
       setTenant(tenantData);
+      localStorage.setItem('tenant_profile', JSON.stringify(tenantData));
     } catch {
       setUser(null);
       setTenant(null);
+      localStorage.removeItem('user_profile');
+      localStorage.removeItem('tenant_profile');
     } finally {
       setIsLoading(false);
     }
@@ -110,6 +128,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_profile');
+    localStorage.removeItem('tenant_profile');
     setUser(null);
     setTenant(null);
   };

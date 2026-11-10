@@ -114,10 +114,10 @@ export const DashboardLayout: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="truncate">
               <div className="text-xs font-bold text-white truncate">
-                {user?.full_name || 'Rodney (Owner)'}
+                {user?.full_name || (user?.email ? user.email.split('@')[0] : 'User')}
               </div>
               <div className="text-[11px] text-slate-400 truncate">
-                {tenant?.name || 'Rodstar Tech Devs'}
+                {tenant?.name || 'My Organization'}
               </div>
             </div>
             <button

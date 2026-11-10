@@ -28,6 +28,45 @@ export const OverviewPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Extract and format the signed-in user's first name
+  const getFirstName = (): string => {
+    const rawFullName = user?.full_name?.trim();
+    if (rawFullName) {
+      const firstToken = rawFullName.split(/\s+/)[0];
+      if (firstToken) {
+        return firstToken.charAt(0).toUpperCase() + firstToken.slice(1);
+      }
+    }
+
+    if (user?.email) {
+      const emailPrefix = user.email.split('@')[0];
+      const cleanToken = emailPrefix.split(/[._-]/)[0];
+      if (cleanToken) {
+        return cleanToken.charAt(0).toUpperCase() + cleanToken.slice(1);
+      }
+    }
+
+    try {
+      const cached = localStorage.getItem('user_profile');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.full_name) {
+          const first = parsed.full_name.trim().split(/\s+/)[0];
+          if (first) return first.charAt(0).toUpperCase() + first.slice(1);
+        }
+        if (parsed?.email) {
+          const emailPrefix = parsed.email.split('@')[0];
+          const cleanToken = emailPrefix.split(/[._-]/)[0];
+          if (cleanToken) return cleanToken.charAt(0).toUpperCase() + cleanToken.slice(1);
+        }
+      }
+    } catch {}
+
+    return 'there';
+  };
+
+  const firstName = getFirstName();
+
   const [stats, setStats] = useState({
     collectedToday: '184,500',
     outstanding: '912,300',
@@ -202,7 +241,7 @@ export const OverviewPage: React.FC = () => {
             })}
           </div>
           <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight mt-0.5">
-            {greeting}, {user?.full_name?.split(' ')[0] || 'User'}
+            {greeting}, {firstName}
           </h1>
         </div>
 
