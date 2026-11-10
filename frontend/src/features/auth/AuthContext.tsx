@@ -25,6 +25,7 @@ interface AuthContextType {
   user: User | null;
   tenant: Tenant | null;
   isLoading: boolean;
+  isTestAccount: boolean;
   login: (email: string, password: string, totpCode?: string) => Promise<any>;
   register: (payload: any) => Promise<any>;
   logout: () => void;
@@ -113,12 +114,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTenant(null);
   };
 
+  const isTestAccount = user?.email === 'rodney@rodstartechdevs.co.ke';
+
   return (
     <AuthContext.Provider
       value={{
         user,
         tenant,
         isLoading,
+        isTestAccount,
         login,
         register,
         logout,

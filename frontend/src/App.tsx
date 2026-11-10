@@ -10,6 +10,7 @@ import { LandingPage } from './pages/LandingPage';
 import { ProductPage } from './pages/ProductPage';
 import { PricingPage } from './pages/PricingPage';
 import { EarlyAccessPage } from './pages/EarlyAccessPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { LoginPage } from './pages/LoginPage';
 
 // App Dashboard Pages (Redesign Pages 4, 8, 9, 10 + Core)
@@ -99,7 +100,7 @@ export const App: React.FC = () => {
             <Route path="/product" element={<ProductPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/early-access" element={<EarlyAccessPage />} />
-            <Route path="/register" element={<EarlyAccessPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
 
             {/* Dashboard Root with conditional rendering */}

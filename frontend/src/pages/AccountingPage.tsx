@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Scale, CheckCircle2, Plus } from 'lucide-react';
+import { useAuth } from '../features/auth/AuthContext';
 import { apiRequest } from '../services/api';
 
 interface AccountRow {
@@ -10,9 +11,14 @@ interface AccountRow {
 }
 
 export const AccountingPage: React.FC = () => {
+  const { isTestAccount } = useAuth();
   const [tab, setTab] = useState<'chart' | 'trial'>('chart');
+  const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasRealData, setHasRealData] = useState(false);
 
-  const accounts: AccountRow[] = [
+  // Default standard Kenyan SME Chart of Accounts for illustration
+  const defaultAccounts: AccountRow[] = [
     { code: '1000', name: 'Petty Cash', type: 'ASSET', balance: '25,000.00' },
     { code: '1010', name: 'M-PESA Clearing Account', type: 'ASSET', balance: '342,850.00' },
     { code: '1020', name: 'KCB Bank - Operating Account', type: 'ASSET', balance: '14,820,450.00' },
@@ -25,6 +31,59 @@ export const AccountingPage: React.FC = () => {
     { code: '6000', name: 'Operating Expenses', type: 'EXPENSE', balance: '1,180,000.00' },
     { code: '6100', name: 'M-PESA & Bank Processing Fees', type: 'EXPENSE', balance: '45,600.00' },
   ];
+
+  useEffect(() => {
+    async function loadAccounts() {
+      setIsLoading(true);
+      try {
+        const [accRes, trialRes] = await Promise.allSettled([
+          apiRequest<any[]>('/accounting/accounts'),
+          apiRequest<any>('/accounting/trial-balance'),
+        ]);
+
+        const realAccounts = accRes.status === 'fulfilled' ? accRes.value : [];
+        const trialBalance = trialRes.status === 'fulfilled' ? trialRes.value : null;
+
+        if (realAccounts && realAccounts.length > 0) {
+          setHasRealData(true);
+          const trialMap = new Map<string, number>();
+          if (trialBalance && trialBalance.lines) {
+            trialBalance.lines.forEach((l: any) => {
+              trialMap.set(l.code, Number(l.debit || 0) - Number(l.credit || 0));
+            });
+          }
+
+          const mapped: AccountRow[] = realAccounts.map((a: any) => ({
+            code: a.code,
+            name: a.name,
+            type: a.account_type,
+            balance: Math.abs(trialMap.get(a.code) || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 }),
+          }));
+          setAccounts(mapped);
+        } else {
+          setHasRealData(false);
+          if (isTestAccount) {
+            setAccounts(defaultAccounts);
+          } else {
+            setAccounts([]);
+          }
+        }
+      } catch {
+        setHasRealData(false);
+        if (isTestAccount) {
+          setAccounts(defaultAccounts);
+        } else {
+          setAccounts([]);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadAccounts();
+  }, [isTestAccount]);
+
+  const showIllustrativeBadge = isTestAccount && !hasRealData;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
@@ -39,7 +98,12 @@ export const AccountingPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
+          {showIllustrativeBadge && (
+            <span className="px-3 py-1.5 rounded-full bg-slate-200/80 text-slate-700 text-xs font-medium">
+              Illustrative data
+            </span>
+          )}
           <span className="px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold flex items-center space-x-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Debits == Credits Balanced</span>
@@ -84,20 +148,28 @@ export const AccountingPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800 font-sans">
-              {accounts.map((acc) => (
-                <tr key={acc.code} className="hover:bg-slate-50/60 transition">
-                  <td className="py-4 font-mono font-bold text-[#16A6D9]">{acc.code}</td>
-                  <td className="py-4 text-slate-900 font-medium">{acc.name}</td>
-                  <td className="py-4">
-                    <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                      {acc.type}
-                    </span>
-                  </td>
-                  <td className="py-4 text-right font-bold text-slate-900 font-mono">
-                    KES {acc.balance}
+              {accounts.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-12 text-center text-slate-400 text-xs">
+                    Loading chart of accounts...
                   </td>
                 </tr>
-              ))}
+              ) : (
+                accounts.map((acc) => (
+                  <tr key={acc.code} className="hover:bg-slate-50/60 transition">
+                    <td className="py-4 font-mono font-bold text-[#16A6D9]">{acc.code}</td>
+                    <td className="py-4 text-slate-900 font-medium">{acc.name}</td>
+                    <td className="py-4">
+                      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                        {acc.type}
+                      </span>
+                    </td>
+                    <td className="py-4 text-right font-bold text-slate-900 font-mono">
+                      KES {acc.balance}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

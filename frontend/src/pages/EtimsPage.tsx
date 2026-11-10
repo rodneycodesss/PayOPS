@@ -11,6 +11,7 @@ import {
   FileText,
   UserCheck,
 } from 'lucide-react';
+import { useAuth } from '../features/auth/AuthContext';
 import { apiRequest } from '../services/api';
 
 interface TaxSubmission {
@@ -24,7 +25,14 @@ interface TaxSubmission {
 }
 
 export const EtimsPage: React.FC = () => {
-  const [submissions, setSubmissions] = useState<TaxSubmission[]>([
+  const { isTestAccount } = useAuth();
+  const [submissions, setSubmissions] = useState<TaxSubmission[]>([]);
+  const [manualCount, setManualCount] = useState(4);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasRealData, setHasRealData] = useState(false);
+
+  // Illustrative baseline for test account
+  const illustrativeSubmissions: TaxSubmission[] = [
     {
       id: 'sub-001',
       invoice_id: 'INV-0043',
@@ -41,7 +49,74 @@ export const EtimsPage: React.FC = () => {
       control_number: 'INTERNAL-VOUCHER-089',
       submitted_at: new Date(Date.now() - 3600000 * 24).toISOString(),
     },
-  ]);
+  ];
+
+  useEffect(() => {
+    async function loadTaxData() {
+      setIsLoading(true);
+      try {
+        const [subRes, invRes] = await Promise.allSettled([
+          apiRequest<any[]>('/tax/submissions'),
+          apiRequest<any[]>('/invoices/'),
+        ]);
+
+        const realSubs = subRes.status === 'fulfilled' ? subRes.value : [];
+        const realInvs = invRes.status === 'fulfilled' ? invRes.value : [];
+
+        const manuallyRecordedInvs = realInvs.filter((i: any) => i.etims_status === 'MANUALLY_RECORDED');
+
+        if (realSubs.length > 0 || manuallyRecordedInvs.length > 0) {
+          setHasRealData(true);
+          const mapped: TaxSubmission[] = [
+            ...realSubs.map((s: any) => ({
+              id: s.id,
+              invoice_id: s.invoice_id,
+              provider: s.provider,
+              status: s.status,
+              control_number: s.control_number,
+              qr_code_url: s.qr_code_url,
+              submitted_at: s.submitted_at,
+            })),
+            ...manuallyRecordedInvs.map((i: any) => ({
+              id: `man-${i.id}`,
+              invoice_id: i.invoice_number,
+              provider: 'ManualReviewTaxAdapter',
+              status: 'MANUALLY_RECORDED',
+              control_number: i.manual_recording_ref || i.etims_control_number || 'MANUAL-REF',
+              submitted_at: i.created_at,
+            })),
+          ];
+
+          setSubmissions(mapped);
+          setManualCount(manuallyRecordedInvs.length);
+        } else {
+          setHasRealData(false);
+          if (isTestAccount) {
+            setSubmissions(illustrativeSubmissions);
+            setManualCount(4);
+          } else {
+            setSubmissions([]);
+            setManualCount(0);
+          }
+        }
+      } catch {
+        setHasRealData(false);
+        if (isTestAccount) {
+          setSubmissions(illustrativeSubmissions);
+          setManualCount(4);
+        } else {
+          setSubmissions([]);
+          setManualCount(0);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadTaxData();
+  }, [isTestAccount]);
+
+  const showIllustrativeBadge = isTestAccount && !hasRealData;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
@@ -55,9 +130,11 @@ export const EtimsPage: React.FC = () => {
             KRA electronic Tax Invoice Management System adapter status and audit log.
           </p>
         </div>
-        <span className="px-3 py-1.5 rounded-full bg-slate-200/80 text-slate-700 text-xs font-medium">
-          Illustrative data
-        </span>
+        {showIllustrativeBadge && (
+          <span className="px-3 py-1.5 rounded-full bg-slate-200/80 text-slate-700 text-xs font-medium">
+            Illustrative data
+          </span>
+        )}
       </div>
 
       {/* Compliance Rule Banner */}
@@ -89,7 +166,7 @@ export const EtimsPage: React.FC = () => {
             Manually Recorded
           </div>
           <div className="text-3xl font-extrabold text-slate-950 mt-2 font-sans">
-            4 Invoices
+            {manualCount} Invoices
           </div>
           <div className="text-xs text-slate-500 mt-1">
             Audit log attached to each reference
@@ -98,53 +175,60 @@ export const EtimsPage: React.FC = () => {
 
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Pending Review
+            Direct KRA Accepted
           </div>
-          <div className="text-3xl font-extrabold text-amber-500 mt-2 font-sans">
-            3 Invoices
+          <div className="text-3xl font-extrabold text-slate-400 mt-2 font-sans">
+            0 Invoices
           </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Awaiting compliance verification
+          <div className="text-xs text-slate-400 mt-1">
+            Enforces zero fake control numbers
           </div>
         </div>
       </div>
 
-      {/* Submissions Table Card */}
+      {/* Submissions Table */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm">
         <h2 className="text-base font-bold text-slate-950 mb-4">
-          eTIMS Submission & Audit History
+          Manual Recording Audit Log
         </h2>
+
         <div className="overflow-x-auto text-sm">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-100 text-xs text-slate-400 font-medium">
-                <th className="pb-4 font-normal">Submission</th>
-                <th className="pb-4 font-normal">Invoice</th>
-                <th className="pb-4 font-normal">Provider Adapter</th>
-                <th className="pb-4 font-normal">Compliance Status</th>
-                <th className="pb-4 font-normal">Control / Ref Number</th>
+                <th className="pb-4 font-normal">Invoice Reference</th>
+                <th className="pb-4 font-normal">Adapter Mode</th>
+                <th className="pb-4 font-normal">External Control / Ref No.</th>
                 <th className="pb-4 font-normal">Timestamp</th>
+                <th className="pb-4 font-normal">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
-              {submissions.map((sub) => (
-                <tr key={sub.id} className="hover:bg-slate-50/60 transition">
-                  <td className="py-4 font-mono font-bold text-slate-900">{sub.id}</td>
-                  <td className="py-4 font-mono text-slate-700">{sub.invoice_id}</td>
-                  <td className="py-4 text-slate-600 text-xs font-mono">{sub.provider}</td>
-                  <td className="py-4">
-                    <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                      {sub.status}
-                    </span>
-                  </td>
-                  <td className="py-4 font-mono text-slate-800 font-medium">
-                    {sub.control_number}
-                  </td>
-                  <td className="py-4 text-xs text-slate-500 font-mono">
-                    {new Date(sub.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {submissions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-400 text-xs">
+                    No invoices recorded in manual review mode yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                submissions.map((s) => (
+                  <tr key={s.id} className="hover:bg-slate-50/60 transition">
+                    <td className="py-4 font-mono font-bold text-slate-900">{s.invoice_id}</td>
+                    <td className="py-4 font-mono text-xs text-slate-600">{s.provider}</td>
+                    <td className="py-4 font-mono text-xs text-slate-700">
+                      {s.control_number || '—'}
+                    </td>
+                    <td className="py-4 text-slate-500 text-xs font-mono">
+                      {new Date(s.submitted_at).toLocaleString('en-KE')}
+                    </td>
+                    <td className="py-4">
+                      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                        {s.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Plus, Search, CheckCircle2, X } from 'lucide-react';
+import { useAuth } from '../features/auth/AuthContext';
 import { apiRequest } from '../services/api';
 
 interface CustomerItem {
@@ -13,7 +14,22 @@ interface CustomerItem {
 }
 
 export const CustomersPage: React.FC = () => {
-  const [customers, setCustomers] = useState<CustomerItem[]>([
+  const { isTestAccount } = useAuth();
+  const [customers, setCustomers] = useState<CustomerItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasRealData, setHasRealData] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form state
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [kraPin, setKraPin] = useState('');
+  const [search, setSearch] = useState('');
+
+  // Baseline illustrative items for test account when empty
+  const illustrativeCustomers: CustomerItem[] = [
     {
       id: 'c-1',
       name: 'Customer A (Acme Kenya Ltd)',
@@ -50,32 +66,73 @@ export const CustomersPage: React.FC = () => {
       credit: '3,200.00',
       status: 'Active',
     },
-  ]);
+  ];
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [kraPin, setKraPin] = useState('');
-  const [search, setSearch] = useState('');
+  const fetchCustomers = async () => {
+    setIsLoading(true);
+    try {
+      const real = await apiRequest<any[]>('/customers/');
+      if (real && real.length > 0) {
+        setHasRealData(true);
+        const mapped: CustomerItem[] = real.map((c) => ({
+          id: c.id,
+          name: c.name,
+          kraPin: c.kra_pin || '—',
+          email: c.email || '—',
+          phone: c.phone || '—',
+          credit: Number(c.credit_balance || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 }),
+          status: c.is_active ? 'Active' : 'Inactive',
+        }));
+        setCustomers(mapped);
+      } else {
+        setHasRealData(false);
+        if (isTestAccount) {
+          setCustomers(illustrativeCustomers);
+        } else {
+          setCustomers([]);
+        }
+      }
+    } catch {
+      setHasRealData(false);
+      if (isTestAccount) {
+        setCustomers(illustrativeCustomers);
+      } else {
+        setCustomers([]);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleCreate = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchCustomers();
+  }, [isTestAccount]);
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newCust: CustomerItem = {
-      id: `c-${Date.now()}`,
-      name,
-      kraPin: kraPin || '—',
-      email,
-      phone,
-      credit: '0.00',
-      status: 'Active',
-    };
-    setCustomers([newCust, ...customers]);
-    setIsModalOpen(false);
-    setName('');
-    setEmail('');
-    setPhone('');
-    setKraPin('');
+    setIsSubmitting(true);
+    try {
+      await apiRequest('/customers/', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          kra_pin: kraPin ? kraPin.toUpperCase() : undefined,
+          email: email || undefined,
+          phone: phone || undefined,
+        }),
+      });
+
+      await fetchCustomers();
+      setIsModalOpen(false);
+      setName('');
+      setEmail('');
+      setPhone('');
+      setKraPin('');
+    } catch (err: any) {
+      alert(`Customer creation failed: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filtered = customers.filter(
@@ -85,10 +142,12 @@ export const CustomersPage: React.FC = () => {
       c.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const showIllustrativeBadge = isTestAccount && !hasRealData;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
             Customer Directory
@@ -98,13 +157,20 @@ export const CustomersPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-6 py-3 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold text-sm transition shadow-md shadow-[#16A6D9]/20 flex items-center space-x-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New customer</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          {showIllustrativeBadge && (
+            <span className="px-3 py-1.5 rounded-full bg-slate-200/80 text-slate-700 text-xs font-medium">
+              Illustrative data
+            </span>
+          )}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-3 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold text-sm transition shadow-md shadow-[#16A6D9]/20 flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New customer</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Input */}
@@ -134,22 +200,42 @@ export const CustomersPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
-              {filtered.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50/60 transition">
-                  <td className="py-4 font-bold text-slate-900">{c.name}</td>
-                  <td className="py-4 font-mono text-xs text-slate-600">{c.kraPin}</td>
-                  <td className="py-4 text-slate-600 text-xs">{c.email}</td>
-                  <td className="py-4 text-slate-600 font-mono text-xs">{c.phone}</td>
-                  <td className="py-4 text-right font-mono font-bold text-emerald-600">
-                    KES {c.credit}
-                  </td>
-                  <td className="py-4">
-                    <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                      {c.status}
-                    </span>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400 text-xs">
+                    {customers.length === 0 ? (
+                      <div className="space-y-2">
+                        <p>No customers in your directory yet.</p>
+                        <button
+                          onClick={() => setIsModalOpen(true)}
+                          className="text-[#16A6D9] font-bold hover:underline"
+                        >
+                          Add your first customer
+                        </button>
+                      </div>
+                    ) : (
+                      'No customers found matching your search.'
+                    )}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filtered.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50/60 transition">
+                    <td className="py-4 font-bold text-slate-900">{c.name}</td>
+                    <td className="py-4 font-mono text-xs text-slate-600">{c.kraPin}</td>
+                    <td className="py-4 text-slate-600 text-xs">{c.email}</td>
+                    <td className="py-4 text-slate-600 font-mono text-xs">{c.phone}</td>
+                    <td className="py-4 text-right font-mono font-bold text-emerald-600">
+                      KES {c.credit}
+                    </td>
+                    <td className="py-4">
+                      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                        {c.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -161,12 +247,15 @@ export const CustomersPage: React.FC = () => {
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-xl font-extrabold text-slate-950">Add Customer</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-900">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-900"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-4 text-xs">
+            <form onSubmit={handleCreate} className="space-y-4 text-xs font-sans">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Company / Entity Name *</label>
                 <input
@@ -222,9 +311,10 @@ export const CustomersPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="px-6 py-2.5 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold transition"
                 >
-                  Create Customer
+                  {isSubmitting ? 'Creating...' : 'Create Customer'}
                 </button>
               </div>
             </form>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Building2, Mail, Lock, User, Phone, ArrowRight } from 'lucide-react';
+import { Building2, Mail, Lock, User, Phone, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 import { Logo } from '../components/Logo';
 
@@ -27,7 +27,7 @@ export const RegisterPage: React.FC = () => {
       await register({
         business_name: businessName,
         trading_name: tradingName || undefined,
-        kra_pin: kraPin || undefined,
+        kra_pin: kraPin ? kraPin.toUpperCase() : undefined,
         full_name: fullName,
         email,
         password,
@@ -42,121 +42,162 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0F1D] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center flex flex-col items-center">
-        <Logo variant="full" size="lg" className="justify-center mb-3" />
-        <h2 className="text-2xl font-extrabold text-white tracking-tight">Onboard Tenant Organization</h2>
-        <p className="mt-1 text-xs text-slate-400">
-          Provisions your business organization, default HQ station, and Kenyan SME Chart of Accounts.
-        </p>
+    <div className="min-h-screen flex flex-col lg:flex-row font-sans selection:bg-[#16A6D9] selection:text-slate-950">
+      {/* Left Column (Midnight Dark) */}
+      <div className="lg:w-1/2 bg-[#080D18] text-white p-8 sm:p-16 flex flex-col justify-between min-h-[400px] lg:min-h-screen border-r border-slate-900">
+        <Link to="/" className="inline-block">
+          <Logo variant="full" size="md" />
+        </Link>
+
+        <div className="my-16 lg:my-0 space-y-6">
+          <h1 className="text-6xl sm:text-7xl lg:text-8xl font-extrabold tracking-tight text-white leading-none">
+            Get<br />
+            started<span className="text-[#16A6D9]">.</span>
+          </h1>
+          <p className="text-lg text-slate-300 max-w-sm">
+            Onboard your business organization, configure M-PESA & bank rails, and provision your Chart of Accounts.
+          </p>
+        </div>
+
+        {/* Visual Accent */}
+        <div className="flex items-end space-x-2.5 h-16 pt-4">
+          <div className="w-4 bg-[#16A6D9]/30 rounded-t h-6"></div>
+          <div className="w-4 bg-[#16A6D9]/50 rounded-t h-10"></div>
+          <div className="w-4 bg-[#16A6D9]/70 rounded-t h-14"></div>
+          <div className="w-4 bg-[#16A6D9] rounded-t h-16"></div>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="bg-[#0B192C] py-8 px-6 shadow-2xl rounded-2xl border border-[#1E2E48]">
-          <form className="space-y-4 text-xs" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-3 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300">
-                {error}
-              </div>
-            )}
+      {/* Right Column (White Form) */}
+      <div className="lg:w-1/2 bg-white text-slate-900 p-8 sm:p-16 lg:p-20 flex flex-col justify-center overflow-y-auto">
+        <div className="max-w-md w-full mx-auto space-y-6">
+          <div>
+            <h2 className="text-3xl font-extrabold text-slate-950 tracking-tight">
+              Create business account
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Multi-tenant isolation guaranteed. Your ledger and data remain strictly private.
+            </p>
+          </div>
 
+          {error && (
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
             <div>
-              <label className="block text-slate-300 font-semibold uppercase tracking-wider mb-1">
+              <label className="block text-slate-700 font-semibold mb-1">
                 Business Legal Name *
               </label>
               <input
                 type="text"
+                required
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
-                required
-                placeholder="Apex Commercials Ltd"
-                className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
+                placeholder="e.g. Acme Commercials Ltd"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-300 font-semibold uppercase tracking-wider mb-1">
+                <label className="block text-slate-700 font-semibold mb-1">
                   Trading Name
                 </label>
                 <input
                   type="text"
                   value={tradingName}
                   onChange={(e) => setTradingName(e.target.value)}
-                  placeholder="Apex Freight"
-                  className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
+                  placeholder="Acme Freight"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
                 />
               </div>
               <div>
-                <label className="block text-slate-300 font-semibold uppercase tracking-wider mb-1">
+                <label className="block text-slate-700 font-semibold mb-1">
                   KRA PIN
                 </label>
                 <input
                   type="text"
                   value={kraPin}
-                  onChange={(e) => setKraPin(e.target.value)}
-                  placeholder="P051234567Z"
-                  className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white uppercase font-mono"
+                  onChange={(e) => setKraPin(e.target.value.toUpperCase())}
+                  placeholder="P051234567A"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900 uppercase"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold uppercase tracking-wider mb-1">
-                Primary Owner Full Name *
+              <label className="block text-slate-700 font-semibold mb-1">
+                Your Full Name *
               </label>
               <input
                 type="text"
+                required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                required
                 placeholder="Jane Wanjiku"
-                className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
               />
             </div>
 
-            <div>
-              <label className="block text-slate-300 font-semibold uppercase tracking-wider mb-1">
-                Owner Email Address *
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="jane@apex.co.ke"
-                className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Work Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jane@acme.co.ke"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+254 711 000 111"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold uppercase tracking-wider mb-1">
-                Password * (min 8 chars)
+              <label className="block text-slate-700 font-semibold mb-1">
+                Password *
               </label>
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
-                placeholder="••••••••••••"
-                className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/25 disabled:opacity-50 mt-4"
+              className="w-full py-3.5 px-6 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-sm transition shadow-xl disabled:opacity-50 mt-2"
             >
-              <span>{isSubmitting ? 'Registering...' : 'Complete Onboarding'}</span>
-              <ArrowRight className="w-4 h-4" />
+              {isSubmitting ? 'Provisioning Tenant...' : 'Create Account & Open Dashboard'}
             </button>
 
-            <div className="pt-2 text-center text-slate-400">
-              Already registered?{' '}
-              <Link to="/login" className="text-emerald-400 hover:underline font-medium">
-                Sign In
+            <div className="pt-2 text-xs text-slate-500 text-center">
+              Already have an account?{' '}
+              <Link to="/login" className="text-[#16A6D9] font-semibold hover:underline">
+                Log in
               </Link>
             </div>
           </form>
