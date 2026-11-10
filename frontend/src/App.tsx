@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import { Logo } from './components/Logo';
 
 import { OverviewPage } from './pages/OverviewPage';
 import { PaymentsPage } from './pages/PaymentsPage';
@@ -38,8 +39,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0F1D] flex items-center justify-center text-emerald-400 font-mono text-sm">
-        Initializing Rodstar PayOps Engine...
+      <div className="min-h-screen bg-[#0A0F1D] flex flex-col items-center justify-center space-y-4 text-slate-400 font-sans">
+        <Logo variant="full" size="xl" className="animate-pulse" />
+        <div className="text-xs font-mono text-slate-500">
+          Initializing Rodstar PayOps Engine...
+        </div>
       </div>
     );
   }
