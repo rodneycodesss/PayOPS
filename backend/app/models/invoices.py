@@ -99,3 +99,7 @@ class CreditNote(Base, TimestampMixin, TenantMixin):
 
     # Relationship
     invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="credit_notes")
+
+    @property
+    def amount(self) -> Decimal:
+        return self.total_amount
