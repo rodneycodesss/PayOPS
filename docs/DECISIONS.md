@@ -67,3 +67,17 @@ This document tracks all key technical choices, financial correctness policies, 
 - **Context:** Kenyan businesses repeatedly upload monthly or weekly CSV bank statements containing overlapping transaction lines. Duplicate imports corrupt balances and double-credit customers.
 - **Decision:** Every ingested bank statement line calculates a deterministic SHA-256 hash from `(bank_account_id, tx_date, reference, amount, tx_type)`. The database schema enforces a tenant-scoped unique constraint `uq_bank_transactions_tenant_row_hash`. The importer skips duplicate rows, safely catches and logs malformed lines without crashing, and updates the account balance accurately.
 - **Consequences:** Re-importing the same CSV is 100% idempotent with zero duplicate ledger impact.
+
+
+---
+
+## Decision 010: Native FastAPI Auth Standard & Production Tenant Security
+- **Context:** Deciding whether to adopt external SaaS auth providers (Auth0, Clerk, Firebase Auth) vs. native in-house authentication.
+- **Decision:** Confirmed **Native FastAPI Auth + JWT + PostgreSQL** as the permanent architectural standard for Rodstar PayOps.
+  1. **JWT Access Tokens**: Cryptographically signed (`HS256`, 30-minute validity) encapsulating tenant ID, user ID, and granular RBAC permissions.
+  2. **Argon2id Hashing**: RFC 9106 compliant password protection ($64\text{MB}$ memory cost, 4 parallelism, 3 iterations).
+  3. **Refresh-Token Rotation**: Cryptographic family tracking with instant token family revocation upon reuse detection.
+  4. **Strict Isolation**: Guaranteed `tenant_id` scoping on every database entity.
+  5. **No External Provider Cost / Vendor Lock-in**: Retains 100% control over customer and financial data without recurring SaaS auth seat fees.
+  6. **Production Single Test Account**: Exactly one dedicated test user account (`rodney@rodstartechdevs.co.ke` / `SecureRodstar2026!`) is pre-filled on the login screen for testing, keeping production databases pristine without dummy user clutter.
+- **Consequences:** Eliminates external monthly identity costs; delivers full autonomy over auth logic and data residency.
