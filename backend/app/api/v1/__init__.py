@@ -8,6 +8,7 @@ from app.api.v1.automations import router as automations_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.banking import router as banking_router
 from app.api.v1.reconciliation import router as reconciliation_router
+from app.api.v1.accounting import router as accounting_router
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(auth_router)
@@ -19,3 +20,4 @@ api_v1_router.include_router(automations_router)
 api_v1_router.include_router(payments_router)
 api_v1_router.include_router(banking_router)
 api_v1_router.include_router(reconciliation_router)
+api_v1_router.include_router(accounting_router)
