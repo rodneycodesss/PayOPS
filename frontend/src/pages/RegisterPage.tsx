@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Building2, Mail, Lock, User, Phone, ArrowRight } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
+import { Logo } from '../components/Logo';
 
 export const RegisterPage: React.FC = () => {
   const [businessName, setBusinessName] = useState('');
@@ -42,9 +43,10 @@ export const RegisterPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0A0F1D] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <h2 className="text-3xl font-extrabold text-white tracking-tight">Onboard Tenant Organization</h2>
-        <p className="mt-2 text-xs text-slate-400">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center flex flex-col items-center">
+        <Logo variant="full" size="lg" className="justify-center mb-3" />
+        <h2 className="text-2xl font-extrabold text-white tracking-tight">Onboard Tenant Organization</h2>
+        <p className="mt-1 text-xs text-slate-400">
           Provisions your business organization, default HQ station, and Kenyan SME Chart of Accounts.
         </p>
       </div>

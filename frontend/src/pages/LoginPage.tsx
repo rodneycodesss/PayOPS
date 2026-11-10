@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, ShieldCheck, Key } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
+import { Logo } from '../components/Logo';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('rodney@rodstartechdevs.co.ke');
@@ -35,11 +36,8 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0A0F1D] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 items-center justify-center font-bold text-white shadow-xl shadow-emerald-500/20 text-xl mb-4">
-          R
-        </div>
-        <h2 className="text-3xl font-extrabold text-white tracking-tight">RODSTAR PAYOPS</h2>
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center flex flex-col items-center">
+        <Logo variant="full" size="xl" className="justify-center mb-1" />
         <p className="mt-2 text-xs text-slate-400">
           Intelligent Payment Operations & Double-Entry Financial SaaS
         </p>

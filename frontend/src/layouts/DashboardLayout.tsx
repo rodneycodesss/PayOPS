@@ -23,6 +23,7 @@ import {
   CircleDot
 } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
+import { Logo } from '../components/Logo';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Overview', icon: LayoutDashboard },
@@ -58,15 +59,7 @@ export const DashboardLayout: React.FC = () => {
       <aside className="hidden lg:flex lg:flex-col w-72 bg-[#0B192C] border-r border-[#1E2E48]">
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-[#1E2E48]">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20">
-              R
-            </div>
-            <div>
-              <span className="font-bold tracking-tight text-white text-lg">RODSTAR</span>
-              <span className="text-xs ml-1.5 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono font-medium">PAYOPS</span>
-            </div>
-          </div>
+          <Logo variant="full" size="md" />
         </div>
 
         {/* Tenant Organization Switcher Info */}
@@ -161,7 +154,7 @@ export const DashboardLayout: React.FC = () => {
           <div className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex">
             <div className="w-72 bg-[#0B192C] h-full flex flex-col border-r border-[#1E2E48] p-4">
               <div className="flex justify-between items-center mb-6">
-                <span className="font-bold text-white text-lg">RODSTAR PAYOPS</span>
+                <Logo variant="full" size="sm" />
                 <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400">
                   <X className="w-6 h-6" />
                 </button>
