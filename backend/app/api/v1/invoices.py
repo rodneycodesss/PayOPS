@@ -33,7 +33,7 @@ async def list_invoices(
     stmt = (
         select(Invoice)
         .where(Invoice.tenant_id == context.tenant_id)
-        .options(selectinload(Invoice.items))
+        .options(selectinload(Invoice.items), selectinload(Invoice.customer))
     )
     if status_filter:
         stmt = stmt.where(Invoice.status == status_filter.upper())
@@ -72,7 +72,7 @@ async def get_invoice(
     stmt = (
         select(Invoice)
         .where(Invoice.id == invoice_id, Invoice.tenant_id == context.tenant_id)
-        .options(selectinload(Invoice.items))
+        .options(selectinload(Invoice.items), selectinload(Invoice.customer))
     )
     res = await db.execute(stmt)
     invoice = res.scalar_one_or_none()

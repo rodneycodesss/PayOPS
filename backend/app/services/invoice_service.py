@@ -126,7 +126,7 @@ class InvoiceService:
         )
         db.add(invoice)
         await db.commit()
-        stmt = select(Invoice).where(Invoice.id == invoice.id).options(selectinload(Invoice.items))
+        stmt = select(Invoice).where(Invoice.id == invoice.id).options(selectinload(Invoice.items), selectinload(Invoice.customer))
         return (await db.execute(stmt)).scalar_one()
 
     @classmethod
@@ -164,7 +164,7 @@ class InvoiceService:
         )
 
         await db.commit()
-        stmt = select(Invoice).where(Invoice.id == invoice.id).options(selectinload(Invoice.items))
+        stmt = select(Invoice).where(Invoice.id == invoice.id).options(selectinload(Invoice.items), selectinload(Invoice.customer))
         return (await db.execute(stmt)).scalar_one()
 
     @classmethod
@@ -255,7 +255,7 @@ class InvoiceService:
         )
 
         await db.commit()
-        stmt = select(Invoice).where(Invoice.id == invoice.id).options(selectinload(Invoice.items))
+        stmt = select(Invoice).where(Invoice.id == invoice.id).options(selectinload(Invoice.items), selectinload(Invoice.customer))
         return (await db.execute(stmt)).scalar_one(), result
 
     @classmethod

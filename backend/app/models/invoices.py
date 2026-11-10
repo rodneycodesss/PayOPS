@@ -6,6 +6,7 @@ from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, Unique
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, TimestampMixin, TenantMixin
+from app.models.customers import Customer
 
 
 class Invoice(Base, TimestampMixin, TenantMixin):
@@ -54,9 +55,14 @@ class Invoice(Base, TimestampMixin, TenantMixin):
     )
 
     # Relationships
+    customer: Mapped[Optional["Customer"]] = relationship("Customer")
     items: Mapped[List["InvoiceItem"]] = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
     allocations: Mapped[List["PaymentAllocation"]] = relationship("PaymentAllocation", back_populates="invoice", cascade="all, delete-orphan")
     credit_notes: Mapped[List["CreditNote"]] = relationship("CreditNote", back_populates="invoice", cascade="all, delete-orphan")
+
+    @property
+    def customer_name(self) -> Optional[str]:
+        return self.customer.name if self.customer else None
 
 
 class InvoiceItem(Base, TimestampMixin):

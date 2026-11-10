@@ -35,6 +35,7 @@ class InvoiceResponse(BaseModel):
     id: str
     tenant_id: str
     customer_id: str
+    customer_name: Optional[str] = None
     invoice_number: str
     status: str
     issue_date: date
@@ -45,10 +46,10 @@ class InvoiceResponse(BaseModel):
     paid_amount: Decimal
     balance_due: Decimal
     currency: str
-    notes: Optional[str]
+    notes: Optional[str] = None
     etims_status: str
-    etims_control_number: Optional[str]
-    manual_recording_ref: Optional[str]
+    etims_control_number: Optional[str] = None
+    manual_recording_ref: Optional[str] = None
     created_at: datetime
     items: List[InvoiceItemResponse] = []
 
