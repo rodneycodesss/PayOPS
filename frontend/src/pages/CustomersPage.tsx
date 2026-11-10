@@ -1,70 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Search, CheckCircle2, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 import { apiRequest } from '../services/api';
 
-interface CustomerItem {
+interface CustomerRow {
   id: string;
-  name: string;
+  customer: string;
   kraPin: string;
-  email: string;
-  phone: string;
-  credit: string;
-  status: string;
+  outstanding: string;
+  lastPayment: string;
 }
 
 export const CustomersPage: React.FC = () => {
   const { isTestAccount } = useAuth();
-  const [customers, setCustomers] = useState<CustomerItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [hasRealData, setHasRealData] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form state
+  // New Customer form
   const [name, setName] = useState('');
+  const [kraPin, setKraPin] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [kraPin, setKraPin] = useState('');
-  const [search, setSearch] = useState('');
 
-  // Baseline illustrative items for test account when empty
-  const illustrativeCustomers: CustomerItem[] = [
+  // Page 12 exact illustrative baseline
+  const illustrativeCustomers: CustomerRow[] = [
     {
       id: 'c-1',
-      name: 'Customer A (Acme Kenya Ltd)',
-      kraPin: 'P051982736Z',
-      email: 'finance@acmekenya.co.ke',
-      phone: '+254711223344',
-      credit: '12,500.00',
-      status: 'Active',
+      customer: 'Customer A',
+      kraPin: 'A••••••••X',
+      outstanding: 'KSh 11,600',
+      lastPayment: 'Today',
     },
     {
       id: 'c-2',
-      name: 'Customer B (Kilifi Wholesale)',
-      kraPin: 'P052847192A',
-      email: 'accounts@kilifiwholesale.com',
-      phone: '+254722334455',
-      credit: '0.00',
-      status: 'Active',
+      customer: 'Customer B',
+      kraPin: 'A••••••••Y',
+      outstanding: 'KSh 29,000',
+      lastPayment: '3 days ago',
     },
     {
       id: 'c-3',
-      name: 'Customer C (Safari Holdings Ltd)',
-      kraPin: 'P059876543A',
-      email: 'billing@safariholdings.co.ke',
-      phone: '+254711002233',
-      credit: '8,000.00',
-      status: 'Active',
+      customer: 'Customer C',
+      kraPin: 'Not provided',
+      outstanding: 'KSh 0',
+      lastPayment: 'Last week',
     },
     {
       id: 'c-4',
-      name: 'Customer D (Nairobi Tech Ventures)',
-      kraPin: 'P051234567A',
-      email: 'finance@ntv.co.ke',
-      phone: '+254799887766',
-      credit: '3,200.00',
-      status: 'Active',
+      customer: 'Customer D',
+      kraPin: 'P••••••••Z',
+      outstanding: 'KSh 12,000',
+      lastPayment: '2 weeks ago',
     },
   ];
 
@@ -74,14 +62,14 @@ export const CustomersPage: React.FC = () => {
       const real = await apiRequest<any[]>('/customers/');
       if (real && real.length > 0) {
         setHasRealData(true);
-        const mapped: CustomerItem[] = real.map((c) => ({
+        const mapped: CustomerRow[] = real.map((c) => ({
           id: c.id,
-          name: c.name,
-          kraPin: c.kra_pin || '—',
-          email: c.email || '—',
-          phone: c.phone || '—',
-          credit: Number(c.credit_balance || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 }),
-          status: c.is_active ? 'Active' : 'Inactive',
+          customer: c.name,
+          kraPin: c.kra_pin
+            ? `${c.kra_pin.slice(0, 1)}••••••••${c.kra_pin.slice(-1)}`
+            : 'Not provided',
+          outstanding: `KSh ${Number(c.credit_balance || 0).toLocaleString()}`,
+          lastPayment: 'Recently',
         }));
         setCustomers(mapped);
       } else {
@@ -110,7 +98,6 @@ export const CustomersPage: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     try {
       await apiRequest('/customers/', {
         method: 'POST',
@@ -121,41 +108,26 @@ export const CustomersPage: React.FC = () => {
           phone: phone || undefined,
         }),
       });
-
       await fetchCustomers();
       setIsModalOpen(false);
       setName('');
+      setKraPin('');
       setEmail('');
       setPhone('');
-      setKraPin('');
     } catch (err: any) {
       alert(`Customer creation failed: ${err.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
   };
-
-  const filtered = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.kraPin.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-  );
 
   const showIllustrativeBadge = isTestAccount && !hasRealData;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
-            Customer Directory
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Customer accounts, KRA PIN tax registry, and overpayment balances.
-          </p>
-        </div>
+      {/* Header Row (Page 12) */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
+          Customers
+        </h1>
 
         <div className="flex items-center space-x-3">
           {showIllustrativeBadge && (
@@ -165,74 +137,40 @@ export const CustomersPage: React.FC = () => {
           )}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-6 py-3 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold text-sm transition shadow-md shadow-[#16A6D9]/20 flex items-center space-x-2"
+            className="px-5 py-2.5 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold text-xs transition shadow-md shadow-[#16A6D9]/20 flex items-center space-x-1.5"
           >
-            <Plus className="w-4 h-4" />
-            <span>New customer</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add customer</span>
           </button>
         </div>
       </div>
 
-      {/* Search Input */}
-      <div className="relative max-w-md">
-        <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search by company name, email, or KRA PIN..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#16A6D9] shadow-sm"
-        />
-      </div>
-
-      {/* Table Card */}
+      {/* Table Card (Page 12) */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm">
         <div className="overflow-x-auto text-sm">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-100 text-xs text-slate-400 font-medium">
-                <th className="pb-4 font-normal">Company / Entity</th>
+                <th className="pb-4 font-normal">Customer</th>
                 <th className="pb-4 font-normal">KRA PIN</th>
-                <th className="pb-4 font-normal">Email</th>
-                <th className="pb-4 font-normal">Phone</th>
-                <th className="pb-4 font-normal text-right">Overpayment Credit</th>
-                <th className="pb-4 font-normal">Status</th>
+                <th className="pb-4 font-normal">Outstanding</th>
+                <th className="pb-4 font-normal">Last payment</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
-              {filtered.length === 0 ? (
+              {customers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400 text-xs">
-                    {customers.length === 0 ? (
-                      <div className="space-y-2">
-                        <p>No customers in your directory yet.</p>
-                        <button
-                          onClick={() => setIsModalOpen(true)}
-                          className="text-[#16A6D9] font-bold hover:underline"
-                        >
-                          Add your first customer
-                        </button>
-                      </div>
-                    ) : (
-                      'No customers found matching your search.'
-                    )}
+                  <td colSpan={4} className="py-12 text-center text-slate-400 text-xs">
+                    No customers registered yet. Click 'Add customer' to begin.
                   </td>
                 </tr>
               ) : (
-                filtered.map((c) => (
+                customers.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50/60 transition">
-                    <td className="py-4 font-bold text-slate-900">{c.name}</td>
+                    <td className="py-4 font-bold text-slate-900">{c.customer}</td>
                     <td className="py-4 font-mono text-xs text-slate-600">{c.kraPin}</td>
-                    <td className="py-4 text-slate-600 text-xs">{c.email}</td>
-                    <td className="py-4 text-slate-600 font-mono text-xs">{c.phone}</td>
-                    <td className="py-4 text-right font-mono font-bold text-emerald-600">
-                      KES {c.credit}
-                    </td>
-                    <td className="py-4">
-                      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                        {c.status}
-                      </span>
-                    </td>
+                    <td className="py-4 font-bold text-slate-900 font-sans">{c.outstanding}</td>
+                    <td className="py-4 text-slate-600 text-xs">{c.lastPayment}</td>
                   </tr>
                 ))
               )}
@@ -247,10 +185,7 @@ export const CustomersPage: React.FC = () => {
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-xl font-extrabold text-slate-950">Add Customer</h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-900"
-              >
+              <button onClick={() => setIsModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-900">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -311,10 +246,9 @@ export const CustomersPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
                   className="px-6 py-2.5 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold transition"
                 >
-                  {isSubmitting ? 'Creating...' : 'Create Customer'}
+                  Create Customer
                 </button>
               </div>
             </form>

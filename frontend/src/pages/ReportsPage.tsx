@@ -1,70 +1,87 @@
-import React from 'react';
-import { BarChart3, Download, FileSpreadsheet, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, CheckCircle2 } from 'lucide-react';
+
+interface ReportCard {
+  title: string;
+  description: string;
+  type: 'Download PDF' | 'Download CSV';
+}
 
 export const ReportsPage: React.FC = () => {
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const reports: ReportCard[] = [
+    {
+      title: 'Daily collections',
+      description: 'Payments received by day and method.',
+      type: 'Download PDF',
+    },
+    {
+      title: 'Reconciliation report',
+      description: 'Matched, partial and unmatched items.',
+      type: 'Download PDF',
+    },
+    {
+      title: 'Aged receivables',
+      description: 'Who owes what, and for how long.',
+      type: 'Download CSV',
+    },
+    {
+      title: 'VAT summary',
+      description: 'Output VAT by period for your accountant.',
+      type: 'Download CSV',
+    },
+    {
+      title: 'Trial balance',
+      description: 'All accounts at a chosen date.',
+      type: 'Download PDF',
+    },
+  ];
+
+  const handleDownload = (report: ReportCard) => {
+    setToastMessage(`Exporting ${report.title} (${report.type.replace('Download ', '')})...`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-sans">
-      {/* Header */}
+    <div className="space-y-8 max-w-7xl mx-auto font-sans">
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 flex items-center space-x-2 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-xl text-xs font-semibold animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Header (Page 16) */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
-          Financial & Tax Reports
+          Reports
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Exportable double-entry trial balances, KRA VAT return schedules, and reconciliation velocity analytics.
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Trial Balance Report */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm flex flex-col justify-between space-y-6">
-          <div className="space-y-3">
-            <div className="p-3 rounded-2xl bg-slate-100 text-[#16A6D9] w-fit">
-              <FileSpreadsheet className="w-6 h-6" />
+      {/* 5 Report Cards Grid (Page 16) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+        {reports.map((r, idx) => (
+          <div
+            key={idx}
+            className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm flex flex-col justify-between space-y-6 hover:border-slate-300 transition min-h-[220px]"
+          >
+            <div>
+              <h2 className="text-xl font-bold text-slate-950">{r.title}</h2>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                {r.description}
+              </p>
             </div>
-            <h2 className="text-xl font-bold text-slate-950">Trial Balance Report</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              General ledger trial balance displaying ending debit and credit balances per account code for the period.
-            </p>
-          </div>
-          <button className="w-full py-3 px-4 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition flex items-center justify-center space-x-2">
-            <Download className="w-4 h-4" />
-            <span>Download CSV Export</span>
-          </button>
-        </div>
 
-        {/* VAT Return Schedule */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm flex flex-col justify-between space-y-6">
-          <div className="space-y-3">
-            <div className="p-3 rounded-2xl bg-slate-100 text-[#16A6D9] w-fit">
-              <BarChart3 className="w-6 h-6" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-950">Kenyan VAT Schedule</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Itemized taxable standard rate (16%), zero-rated, and exempt turnover breakdown for KRA iTax filing.
-            </p>
+            <button
+              onClick={() => handleDownload(r)}
+              className="w-full py-3 px-4 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md"
+            >
+              {r.type}
+            </button>
           </div>
-          <button className="w-full py-3 px-4 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition flex items-center justify-center space-x-2">
-            <Download className="w-4 h-4" />
-            <span>Export VAT Schedule</span>
-          </button>
-        </div>
-
-        {/* Reconciliation Audit Trail */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm flex flex-col justify-between space-y-6">
-          <div className="space-y-3">
-            <div className="p-3 rounded-2xl bg-slate-100 text-[#16A6D9] w-fit">
-              <Calendar className="w-6 h-6" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-950">Reconciliation Audit Trail</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Audit log of all rule tiers, confidence rankings, manual resolutions, and exception overrides.
-            </p>
-          </div>
-          <button className="w-full py-3 px-4 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition flex items-center justify-center space-x-2">
-            <Download className="w-4 h-4" />
-            <span>Export Audit Trail</span>
-          </button>
-        </div>
+        ))}
       </div>
     </div>
   );

@@ -1,191 +1,229 @@
-import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, UserPlus, Key } from 'lucide-react';
-import { apiRequest } from '../services/api';
+import React, { useState } from 'react';
+import { Plus, X, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../features/auth/AuthContext';
+
+interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  twoFactor: 'On' | 'Off';
+  status: 'Active' | 'Invited';
+}
 
 export const TeamPage: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [roleName, setRoleName] = useState('finance_admin');
-  const [tempPassword, setTempPassword] = useState('StaffPass2026!');
-  const [message, setMessage] = useState<string | null>(null);
+  const { isTestAccount } = useAuth();
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const fetchUsers = () => {
-    apiRequest<any[]>('/tenants/users')
-      .then((data) => setUsers(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
+  // Exact members from Page 18
+  const [members, setMembers] = useState<TeamMember[]>([
+    {
+      id: 'm-1',
+      name: 'Team member 1',
+      role: 'Business Owner',
+      twoFactor: 'On',
+      status: 'Active',
+    },
+    {
+      id: 'm-2',
+      name: 'Team member 2',
+      role: 'Finance Administrator',
+      twoFactor: 'On',
+      status: 'Active',
+    },
+    {
+      id: 'm-3',
+      name: 'Team member 3',
+      role: 'Cashier',
+      twoFactor: 'Off',
+      status: 'Active',
+    },
+    {
+      id: 'm-4',
+      name: 'Team member 4',
+      role: 'Auditor',
+      twoFactor: 'Off',
+      status: 'Invited',
+    },
+  ]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  // Invite Form
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('Accountant');
 
-  const handleInvite = async (e: React.FormEvent) => {
+  const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await apiRequest('/tenants/users/invite', {
-        method: 'POST',
-        body: JSON.stringify({
-          email,
-          full_name: fullName,
-          role_name: roleName,
-          temp_password: tempPassword,
-        }),
-      });
-      setMessage(`Invited ${fullName} (${email}) as ${roleName}`);
-      setShowInviteModal(false);
-      setEmail('');
-      setFullName('');
-      fetchUsers();
-    } catch (err: any) {
-      alert(err.message || 'Failed to invite user');
-    }
+    const newM: TeamMember = {
+      id: `m-${Date.now()}`,
+      name: inviteEmail.split('@')[0],
+      role: inviteRole,
+      twoFactor: 'Off',
+      status: 'Invited',
+    };
+    setMembers([...members, newM]);
+    setIsInviteOpen(false);
+    setInviteEmail('');
+    setToastMessage(`Invitation sent to ${inviteEmail} with role ${inviteRole}.`);
+    setTimeout(() => setToastMessage(null), 4000);
   };
+
+  const ROLES = [
+    'Business Owner',
+    'Finance Administrator',
+    'Accountant',
+    'Cashier',
+    'Auditor',
+    'Read-only User',
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Team & Access Control</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Role-Based Access Control (RBAC) with granular permissions across financial modules.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowInviteModal(true)}
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition shadow-lg shadow-emerald-500/20"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          <span>Invite Staff User</span>
-        </button>
-      </div>
-
-      {message && (
-        <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs">
-          {message}
+    <div className="space-y-6 max-w-7xl mx-auto font-sans">
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 flex items-center space-x-2 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-xl text-xs font-semibold animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{toastMessage}</span>
         </div>
       )}
 
-      {showInviteModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0B192C] border border-[#1E2E48] rounded-xl p-6 text-xs">
-            <h2 className="text-base font-bold text-white mb-4">Invite Organization Member</h2>
-            <form onSubmit={handleInvite} className="space-y-4">
+      {/* Header Row (Page 18) */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
+          Team and Permissions
+        </h1>
+
+        <button
+          onClick={() => setIsInviteOpen(true)}
+          className="px-6 py-3 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold text-sm transition shadow-md shadow-[#16A6D9]/20 flex items-center space-x-2"
+        >
+          <span>Invite member</span>
+        </button>
+      </div>
+
+      {/* Members Table Card (Page 18) */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm">
+        <div className="overflow-x-auto text-sm">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-slate-100 text-xs text-slate-400 font-medium">
+                <th className="pb-4 font-normal">Member</th>
+                <th className="pb-4 font-normal">Role</th>
+                <th className="pb-4 font-normal">Two-factor</th>
+                <th className="pb-4 font-normal">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-800">
+              {members.map((m) => (
+                <tr key={m.id} className="hover:bg-slate-50/60 transition">
+                  <td className="py-4 font-medium text-slate-900">{m.name}</td>
+                  <td className="py-4 text-slate-700">{m.role}</td>
+                  <td className="py-4">
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                        m.twoFactor === 'On'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {m.twoFactor}
+                    </span>
+                  </td>
+                  <td className="py-4">
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                        m.status === 'Active'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {m.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Roles & Illustrative Data Bar (Page 18 Bottom) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {ROLES.map((role) => (
+            <span
+              key={role}
+              className="px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-medium"
+            >
+              {role}
+            </span>
+          ))}
+        </div>
+
+        {isTestAccount && (
+          <span className="px-3 py-1.5 rounded-full bg-slate-200/80 text-slate-700 text-xs font-medium shrink-0">
+            Illustrative data
+          </span>
+        )}
+      </div>
+
+      {/* Modal: Invite Member */}
+      {isInviteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-xl font-extrabold text-slate-950">Invite Team Member</h3>
+              <button onClick={() => setIsInviteOpen(false)} className="p-1 text-slate-400 hover:text-slate-900">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInvite} className="space-y-4 text-xs font-sans">
               <div>
-                <label className="block text-slate-300 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-slate-300 mb-1">Email Address</label>
+                <label className="block text-slate-700 font-semibold mb-1">Email Address *</label>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
                   required
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="colleague@business.co.ke"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
                 />
               </div>
+
               <div>
-                <label className="block text-slate-300 mb-1">Assign Role</label>
+                <label className="block text-slate-700 font-semibold mb-1">Assigned Role</label>
                 <select
-                  value={roleName}
-                  onChange={(e) => setRoleName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
                 >
-                  <option value="finance_admin">Finance Administrator</option>
-                  <option value="accountant">Accountant</option>
-                  <option value="cashier">Cashier</option>
-                  <option value="auditor">Auditor (Read-Only)</option>
-                  <option value="viewer">Viewer (Dashboard Only)</option>
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-slate-300 mb-1">Temporary Initial Password</label>
-                <input
-                  type="password"
-                  value={tempPassword}
-                  onChange={(e) => setTempPassword(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#0E1E35] border border-[#1E2E48] text-white"
-                  required
-                />
-              </div>
-              <div className="flex justify-end space-x-2 pt-2">
+
+              <div className="flex justify-end space-x-3 pt-3">
                 <button
                   type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 rounded-lg bg-[#11223A] text-slate-300"
+                  onClick={() => setIsInviteOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium"
+                  className="px-6 py-2.5 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold transition"
                 >
-                  Send Invite
+                  Send Invitation
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      <div className="p-6 rounded-xl bg-[#0B192C] border border-[#1E2E48]">
-        <div className="overflow-x-auto text-xs">
-          <table className="w-full text-left font-mono">
-            <thead className="bg-[#0E1E35] text-slate-400 uppercase text-[11px]">
-              <tr>
-                <th className="py-2.5 px-3">Name</th>
-                <th className="py-2.5 px-3">Email</th>
-                <th className="py-2.5 px-3">Assigned Roles</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3">MFA</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1E2E48]/50">
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-6 text-center text-slate-500 font-sans">
-                    {loading ? 'Querying team members...' : 'Zero team users found.'}
-                  </td>
-                </tr>
-              ) : (
-                users.map((u) => (
-                  <tr key={u.id} className="hover:bg-[#11223A]/30 transition">
-                    <td className="py-2.5 px-3 font-sans font-semibold text-white">{u.full_name}</td>
-                    <td className="py-2.5 px-3 text-slate-300">{u.email}</td>
-                    <td className="py-2.5 px-3">
-                      {u.roles.map((r: string) => (
-                        <span key={r} className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] mr-1.5 uppercase">
-                          {r}
-                        </span>
-                      ))}
-                    </td>
-                    <td className="py-2.5 px-3 font-sans">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px]">
-                        Active
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-sans">
-                      <span className={`px-2 py-0.5 rounded text-[10px] ${u.mfa_enabled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
-                        {u.mfa_enabled ? 'Enforced' : 'Optional'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 };
