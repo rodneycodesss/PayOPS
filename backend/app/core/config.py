@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -67,7 +67,21 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "no-reply@rodstartechdevs.co.ke"
     EMAIL_FROM_NAME: str = "Rodstar PayOps"
 
-    # Daraja Default Shortcode (Sandbox fallback)
+    # Tuma API Payment Gateway Configuration (https://api.tuma.co.ke)
+    TUMA_BASE_URL: str = Field(default="https://api.tuma.co.ke", description="Tuma API Base URL")
+    TUMA_API_KEY: Optional[str] = Field(default=None, description="Tuma API Key")
+    TUMA_BUSINESS_EMAIL: Optional[str] = Field(default=None, description="Tuma Business Email")
+    TUMA_ACCOUNT_ALIAS: Optional[str] = Field(default=None, description="Tuma Settlement Account Alias (optional)")
+    TUMA_CALLBACK_URL: Optional[str] = Field(default=None, description="Tuma Webhook Public Callback URL")
+    TUMA_IS_SANDBOX: bool = Field(default=False, description="Set to True for Sandbox/Simulated mode")
+
+    # Deprecated Daraja compatibility fields
+    DARAJA_IS_SANDBOX: bool = Field(default=False, description="Deprecated Daraja sandbox flag")
+    DARAJA_CONSUMER_KEY: Optional[str] = Field(default=None, description="Deprecated")
+    DARAJA_CONSUMER_SECRET: Optional[str] = Field(default=None, description="Deprecated")
+    DARAJA_SHORTCODE: Optional[str] = Field(default=None, description="Deprecated")
+    DARAJA_PASSKEY: Optional[str] = Field(default=None, description="Deprecated")
+    DARAJA_CALLBACK_URL: Optional[str] = Field(default=None, description="Deprecated")
     DARAJA_SANDBOX_SHORTCODE: str = "174379"
 
     # Base Currency

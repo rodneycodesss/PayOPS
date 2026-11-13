@@ -24,7 +24,7 @@ class PaymentProvider(Base, TimestampMixin, TenantMixin):
     # Encrypted credentials at rest (Consumer Key, Consumer Secret, Passkey, API Tokens)
     encrypted_credentials: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
-    is_sandbox: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_sandbox: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     # Verification status: unverified, verified

@@ -284,7 +284,7 @@ class PostingService:
         - Credit 1200 (Accounts Receivable): payment.allocated_amount
         - Credit 2110 (Customer Overpayment Credit): payment.unallocated_amount (if overpaid)
         """
-        clearing_account = "1010" if payment.provider == "DARAJA" else "1020"
+        clearing_account = "1010" if payment.provider in ("TUMA", "TUMA_MPESA", "DARAJA") else "1020"
 
         lines: List[LedgerLineCreate] = [
             LedgerLineCreate(

@@ -26,8 +26,9 @@ async def initiate_stk_push(
     context: TenantContext = Depends(require_permission("payment:initiate")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Initiates an M-PESA STK Push prompt to customer handset."""
-    callback_url = f"{request.base_url}api/v1/payments/daraja/callback"
+    """Initiates an M-PESA STK Push prompt to customer handset via Tuma API Payment Gateway."""
+    from app.core.config import settings
+    callback_url = settings.TUMA_CALLBACK_URL or f"{str(request.base_url).rstrip('/')}/api/v1/payments/tuma/callback"
     return await PaymentService.initiate_stk_push(
         db=db,
         tenant_id=context.tenant_id,
@@ -36,23 +37,49 @@ async def initiate_stk_push(
     )
 
 
-@router.post("/daraja/callback")
-async def daraja_stk_callback(
+@router.post("/tuma/callback")
+async def tuma_webhook_callback(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Inbound asynchronous callback listener for Safaricom Daraja STK Push responses.
-    Can be called directly by Safaricom or forwarded via n8n WF03.
+    Inbound asynchronous webhook callback listener for Tuma API Payment Gateway STK Push responses.
     """
     raw_body = await request.body()
     raw_str = raw_body.decode("utf-8")
     payload = await request.json()
 
     # Process callback idempotently
-    payment = await PaymentService.process_stk_callback(
+    payment = await PaymentService.process_tuma_callback(
         db=db,
         tenant_id=None,  # Resolved automatically from in-flight checkout request
+        callback_payload=payload,
+        raw_payload_str=raw_str,
+    )
+    return {
+        "status": "success",
+        "result_code": 0,
+        "result_desc": "Callback accepted",
+        "payment_id": payment.id,
+        "payment_status": payment.status,
+    }
+
+
+@router.post("/daraja/callback")
+async def daraja_stk_callback_deprecated(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Backward-compatibility callback endpoint forwarding to Tuma webhook callback processor.
+    """
+    raw_body = await request.body()
+    raw_str = raw_body.decode("utf-8")
+    payload = await request.json()
+
+    payment = await PaymentService.process_tuma_callback(
+        db=db,
+        tenant_id=None,
         callback_payload=payload,
         raw_payload_str=raw_str,
     )
@@ -68,7 +95,7 @@ async def daraja_stk_callback(
 async def daraja_c2b_validation(
     payload: Dict[str, Any],
 ):
-    """Safaricom C2B validation hook. Accepts valid transactions."""
+    """C2B validation hook. Accepts valid transactions."""
     return {
         "ResultCode": 0,
         "ResultDesc": "Accepted",
@@ -82,7 +109,7 @@ async def daraja_c2b_confirmation(
     context: TenantContext = Depends(get_tenant_context),
     db: AsyncSession = Depends(get_db),
 ):
-    """Safaricom C2B confirmation hook. Records payment with deduplication."""
+    """C2B confirmation hook. Records payment with deduplication."""
     raw_body = await request.body()
     raw_str = raw_body.decode("utf-8")
 
@@ -102,7 +129,7 @@ async def daraja_c2b_confirmation(
 @router.get("/", response_model=List[PaymentResponse])
 async def list_payments(
     status: Optional[str] = Query(None, description="INITIATED, SUCCEEDED, CANCELLED, FAILED, TIMED_OUT"),
-    provider: Optional[str] = Query(None, description="DARAJA, BANK, MANUAL"),
+    provider: Optional[str] = Query(None, description="TUMA_MPESA, TUMA, BANK, MANUAL, DARAJA"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     context: TenantContext = Depends(require_permission("payment:view")),

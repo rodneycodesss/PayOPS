@@ -287,13 +287,12 @@ async def test_payment_provider_sandbox_and_unverified(
         "/api/v1/payments/providers",
         headers=headers,
         json={
-            "provider_type": "DARAJA_PAYBILL",
-            "name": "Alpha Safaricom Sandbox",
-            "identifier": "174379",
+            "provider_type": "TUMA_MPESA",
+            "name": "Alpha Tuma Gateway Sandbox",
+            "identifier": "business@alpha.co.ke",
             "is_sandbox": True,
-            "consumer_key": "test_consumer_key",
-            "consumer_secret": "test_consumer_secret",
-            "passkey": "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
+            "api_key": "test_api_key",
+            "email": "business@alpha.co.ke",
         },
     )
     assert prov1.status_code == 200
@@ -305,12 +304,74 @@ async def test_payment_provider_sandbox_and_unverified(
         "/api/v1/payments/providers",
         headers=headers,
         json={
-            "provider_type": "DARAJA_TILL",
-            "name": "Alpha Safaricom Production Till",
-            "identifier": "887766",
+            "provider_type": "TUMA_MPESA",
+            "name": "Alpha Tuma Live Gateway",
+            "identifier": "live@alpha.co.ke",
             "is_sandbox": False,
         },
     )
     assert prov2.status_code == 200
     p2_data = prov2.json()
     assert p2_data["verification_status"] == "implemented_unverified"
+
+
+@pytest.mark.asyncio
+async def test_tuma_native_callback_and_idempotency(
+    db_session: AsyncSession,
+    client: AsyncClient,
+    tenant_a: dict,
+):
+    """
+    Tests Tuma API Payment Gateway native callback format and strict idempotency deduplication.
+    """
+    token = tenant_a["access_token"]
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    tenant_id = tenant_a["tenant"].id
+
+    # 1. Initiate STK push
+    init_res = await client.post(
+        "/api/v1/payments/stk-push",
+        headers=headers,
+        json={
+            "phone_number": "254712345678",
+            "amount": "3200.00",
+            "account_reference": "INV-TUMA-01",
+        },
+    )
+    assert init_res.status_code == 200, init_res.text
+    checkout_id = init_res.json()["checkout_request_id"]
+
+    # 2. Simulate native Tuma API callback payload
+    tuma_payload = {
+        "status": "completed",
+        "result_code": 0,
+        "result_desc": "The service request is processed successfully.",
+        "checkout_request_id": checkout_id,
+        "merchant_request_id": f"MR_{checkout_id}",
+        "amount": 3200.00,
+        "phone": "254712345678",
+        "reference": "INV-TUMA-01",
+        "mpesa_receipt_number": "TUMA_QKH112233",
+    }
+
+    cb1 = await client.post("/api/v1/payments/tuma/callback", json=tuma_payload)
+    assert cb1.status_code == 200
+    assert cb1.json()["status"] == "success"
+
+    # Duplicate delivery
+    cb2 = await client.post("/api/v1/payments/tuma/callback", json=tuma_payload)
+    assert cb2.status_code == 200
+
+    # Verify exactly one payment in DB
+    stmt = (
+        select(Payment)
+        .where(
+            Payment.tenant_id == tenant_id,
+            Payment.provider_reference == "TUMA_QKH112233",
+        )
+    )
+    res = await db_session.execute(stmt)
+    payments = res.scalars().all()
+    assert len(payments) == 1
+    assert payments[0].status == "SUCCEEDED"
+    assert payments[0].amount == Decimal("3200.00")

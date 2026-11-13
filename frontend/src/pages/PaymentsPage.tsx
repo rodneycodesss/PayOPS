@@ -75,7 +75,7 @@ export const PaymentsPage: React.FC = () => {
           id: p.id,
           reference: p.provider_reference || p.checkout_request_id || p.id.slice(0, 10).toUpperCase(),
           customer: p.sender_name || p.sender_phone || p.account_reference || 'Customer',
-          method: p.provider === 'DARAJA' ? 'M-PESA' : p.provider === 'BANK' ? 'Bank' : p.provider || 'M-PESA',
+          method: (p.provider === 'TUMA_MPESA' || p.provider === 'TUMA' || p.provider === 'DARAJA') ? 'M-PESA' : p.provider === 'BANK' ? 'Bank' : p.provider || 'M-PESA',
           amount: Number(p.amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
           status: p.status === 'SUCCEEDED' ? 'Succeeded' : p.status === 'FAILED' ? 'Failed' : 'Pending',
         }));
@@ -261,7 +261,10 @@ export const PaymentsPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-xl font-extrabold text-slate-950">Request M-PESA STK Push</h3>
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-950">Request Payment</h3>
+                <p className="text-xs text-slate-500">M-PESA STK Push via Tuma Payment Gateway</p>
+              </div>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 text-slate-400 hover:text-slate-900 transition"

@@ -402,9 +402,9 @@ async def list_workflows(
 ):
     """Lists all available n8n workflows with metadata and file status."""
     workflows_meta = [
-        {"id": "WF01", "name": "M-PESA Intake Polling", "group": "Payments", "file": "WF01_mpesa_intake.json", "schedule": "Continuous (every 1 min)", "description": "Polls M-PESA Daraja API or ingestion queue for newly arrived Paybill/Till transactions."},
-        {"id": "WF02", "name": "STK Push Initiation Trigger", "group": "Payments", "file": "WF02_stk_push_initiation.json", "schedule": "On-demand webhook", "description": "Triggered by order checkouts to initiate real-time Daraja STK Push prompts on customer phones."},
-        {"id": "WF03", "name": "STK Callback Webhook Processor", "group": "Payments", "file": "WF03_callback_processing.json", "schedule": "Inbound webhook", "description": "Processes asynchronous Safaricom callback confirmations with idempotency deduplication."},
+        {"id": "WF01", "name": "M-PESA Intake Polling", "group": "Payments", "file": "WF01_mpesa_intake.json", "schedule": "Continuous (every 1 min)", "description": "Polls Tuma API Payment Gateway or ingestion queue for newly arrived Paybill/Till transactions."},
+        {"id": "WF02", "name": "STK Push Initiation Trigger", "group": "Payments", "file": "WF02_stk_push_initiation.json", "schedule": "On-demand webhook", "description": "Triggered by order checkouts to initiate real-time Tuma API STK Push prompts on customer phones."},
+        {"id": "WF03", "name": "STK Callback Webhook Processor", "group": "Payments", "file": "WF03_callback_processing.json", "schedule": "Inbound webhook", "description": "Processes asynchronous Tuma API callback confirmations with idempotency deduplication."},
         {"id": "WF04", "name": "Invoice Auto-Reconciliation", "group": "Reconciliation", "file": "WF04_invoice_reconciliation.json", "schedule": "Daily at 02:00 EAT", "description": "Executes 5-tier deterministic rules matching payments to open sales invoices."},
         {"id": "WF05", "name": "Unmatched Exceptions Alert", "group": "Reconciliation", "file": "WF05_unmatched_exceptions.json", "schedule": "Daily at 06:00 EAT", "description": "Scans unresolved exceptions older than 24 hours and alerts operations staff."},
         {"id": "WF06", "name": "Bank Statement Ingest Pipeline", "group": "Reconciliation", "file": "WF06_bank_import.json", "schedule": "Continuous / Webhook", "description": "Consumes bank transaction feeds, validates SHA-256 idempotency, and stages records."},

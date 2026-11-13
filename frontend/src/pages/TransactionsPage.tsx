@@ -85,7 +85,7 @@ export const TransactionsPage: React.FC = () => {
 
             return {
               id: p.id,
-              source: p.provider === 'DARAJA' ? 'M-PESA' : p.provider || 'M-PESA',
+              source: (p.provider === 'TUMA_MPESA' || p.provider === 'TUMA' || p.provider === 'DARAJA') ? 'M-PESA' : p.provider || 'M-PESA',
               reference: p.provider_reference || p.checkout_request_id || p.id.slice(0, 10).toUpperCase(),
               amount: Number(p.amount || 0).toLocaleString(),
               match: matchLabel,
