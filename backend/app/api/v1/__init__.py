@@ -12,6 +12,7 @@ from app.api.v1.accounting import router as accounting_router
 from app.api.v1.invoices import router as invoices_router
 from app.api.v1.tax import router as tax_router
 from app.api.v1.customers import router as customers_router
+from app.api.v1.tuma import router as tuma_router
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(auth_router)
@@ -27,3 +28,4 @@ api_v1_router.include_router(accounting_router)
 api_v1_router.include_router(invoices_router)
 api_v1_router.include_router(tax_router)
 api_v1_router.include_router(customers_router)
+api_v1_router.include_router(tuma_router)

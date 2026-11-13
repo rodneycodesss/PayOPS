@@ -21,6 +21,15 @@ from app.models.accounting import ChartOfAccounts, JournalEntry, LedgerEntry
 from app.models.tax import TaxConfiguration, TaxSubmission
 from app.models.notifications import Notification, AutomationJob
 from app.models.api_keys import ApiKey
+from app.models.tuma import (
+    TumaChildAccount,
+    TenantSettlementDetail,
+    TumaProvisioningJob,
+    TumaPaymentRequest,
+    TumaWebhookEvent,
+    Collection,
+    IntegrationEvent,
+)
 
 __all__ = [
     "Base",
@@ -56,4 +65,11 @@ __all__ = [
     "Notification",
     "AutomationJob",
     "ApiKey",
+    "TumaChildAccount",
+    "TenantSettlementDetail",
+    "TumaProvisioningJob",
+    "TumaPaymentRequest",
+    "TumaWebhookEvent",
+    "Collection",
+    "IntegrationEvent",
 ]

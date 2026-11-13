@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ArrowUpRight, CheckCircle2, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Search, ArrowUpRight, CheckCircle2, Clock, AlertTriangle, ShieldCheck, Building2 } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 import { apiRequest } from '../services/api';
 
@@ -86,16 +86,23 @@ export const OverviewPage: React.FC = () => {
     recordedManually: 4,
   });
 
+  const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
+
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       setIsLoading(true);
       try {
-        const [paymentsRes, invoicesRes, exceptionsRes] = await Promise.allSettled([
+        const [paymentsRes, invoicesRes, exceptionsRes, tumaStatusRes] = await Promise.allSettled([
           apiRequest<any[]>('/payments/'),
           apiRequest<any[]>('/invoices/'),
           apiRequest<any[]>('/reconciliation/exceptions?status_filter=OPEN'),
+          apiRequest<any>('/tuma/onboarding/status'),
         ]);
+
+        if (tumaStatusRes.status === 'fulfilled' && tumaStatusRes.value) {
+          setOnboardingStatus(tumaStatusRes.value.status);
+        }
 
         const payments = paymentsRes.status === 'fulfilled' ? paymentsRes.value : [];
         const invoices = invoicesRes.status === 'fulfilled' ? invoicesRes.value : [];
@@ -263,6 +270,33 @@ export const OverviewPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Onboarding Settlement Banner */}
+      {onboardingStatus && onboardingStatus !== 'active' && (
+        <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                {onboardingStatus === 'needs_action'
+                  ? 'Action Required: Fix settlement details'
+                  : 'Connect your settlement account to start collecting'}
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Incoming M-PESA STK push payments settle directly into your bank. PayOps never holds custody of your funds.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/settings')}
+            className="px-5 py-2.5 bg-[#080D18] hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition shadow-sm whitespace-nowrap self-start sm:self-center"
+          >
+            Connect bank account
+          </button>
+        </div>
+      )}
 
       {/* Top 3 KPI Cards (Page 4) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">

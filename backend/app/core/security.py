@@ -76,6 +76,27 @@ def decrypt_secret(secret_ciphertext: str) -> str:
         raise ValueError("Decryption failed: invalid encryption key or corrupted data")
 
 
+def mask_account(account_number: str) -> str:
+    """Masks all but the last 4 characters of an account number."""
+    if not account_number:
+        return ""
+    clean = str(account_number).strip()
+    if len(clean) <= 4:
+        return clean
+    return f"{'•' * (len(clean) - 4)}{clean[-4:]}"
+
+
+def mask_phone(phone: str) -> str:
+    """Masks middle characters of phone number e.g. 2547••••5678."""
+    if not phone:
+        return ""
+    clean = str(phone).strip().replace("+", "")
+    if len(clean) <= 6:
+        return clean
+    return f"{clean[:4]}{'•' * max(len(clean) - 8, 4)}{clean[-4:]}"
+
+
+
 # --- JWT Access & Refresh Tokens ---
 
 def create_access_token(
