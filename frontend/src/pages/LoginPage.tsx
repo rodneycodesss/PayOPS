@@ -125,7 +125,7 @@ export const LoginPage: React.FC = () => {
             ) : (
               <div>
                 <label className="block text-sm font-medium text-slate-900 mb-2">
-                  Enter 6-Digit TOTP Authenticator Code
+                  Enter 6-Digit OTP Authenticator Code
                 </label>
                 <input
                   type="text"

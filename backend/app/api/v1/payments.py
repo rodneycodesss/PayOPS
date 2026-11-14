@@ -26,9 +26,15 @@ async def initiate_stk_push(
     context: TenantContext = Depends(require_permission("payment:initiate")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Initiates an M-PESA STK Push prompt to customer handset via Tuma API Payment Gateway."""
+    """Initiates an M-PESA STK Push prompt to customer handset via Tuma API or Safaricom Daraja."""
     from app.core.config import settings
-    callback_url = settings.TUMA_CALLBACK_URL or f"{str(request.base_url).rstrip('/')}/api/v1/payments/tuma/callback"
+    base_url = str(request.base_url).rstrip("/")
+    is_daraja = (request_data.provider or "").upper() in ("DARAJA", "DARAJA_PAYBILL", "DARAJA_TILL")
+    if is_daraja:
+        callback_url = f"{base_url}/api/v1/payments/daraja/callback"
+    else:
+        callback_url = settings.TUMA_CALLBACK_URL or f"{base_url}/api/v1/payments/tuma/callback"
+
     return await PaymentService.initiate_stk_push(
         db=db,
         tenant_id=context.tenant_id,
@@ -66,12 +72,13 @@ async def tuma_webhook_callback(
 
 
 @router.post("/daraja/callback")
-async def daraja_stk_callback_deprecated(
+async def daraja_stk_callback(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Backward-compatibility callback endpoint forwarding to Tuma webhook callback processor.
+    Inbound asynchronous callback listener for Safaricom Daraja STK Push responses.
+    Handles CustomerPayBillOnline and CustomerBuyGoodsOnline callback payloads.
     """
     raw_body = await request.body()
     raw_str = raw_body.decode("utf-8")
@@ -95,7 +102,7 @@ async def daraja_stk_callback_deprecated(
 async def daraja_c2b_validation(
     payload: Dict[str, Any],
 ):
-    """C2B validation hook. Accepts valid transactions."""
+    """Safaricom Daraja C2B validation hook. Accepts valid transactions."""
     return {
         "ResultCode": 0,
         "ResultDesc": "Accepted",
@@ -109,7 +116,7 @@ async def daraja_c2b_confirmation(
     context: TenantContext = Depends(get_tenant_context),
     db: AsyncSession = Depends(get_db),
 ):
-    """C2B confirmation hook. Records payment with deduplication."""
+    """Safaricom Daraja C2B confirmation hook for Paybill and Till. Records payment with deduplication."""
     raw_body = await request.body()
     raw_str = raw_body.decode("utf-8")
 
@@ -123,6 +130,32 @@ async def daraja_c2b_confirmation(
         "ResultCode": 0,
         "ResultDesc": "Confirmation processed",
         "payment_id": payment.id,
+    }
+
+
+@router.post("/daraja/register-c2b")
+async def register_daraja_c2b(
+    request: Request,
+    context: TenantContext = Depends(require_permission("payment:manage")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Registers C2B validation and confirmation URLs with Safaricom Daraja for this tenant's Paybill or Till.
+    """
+    client, provider = await PaymentService.get_or_create_daraja_client(db, context.tenant_id)
+    base_url = str(request.base_url).rstrip("/")
+    val_url = f"{base_url}/api/v1/payments/daraja/c2b-validation"
+    conf_url = f"{base_url}/api/v1/payments/daraja/c2b-confirmation"
+    resp = await client.register_c2b_urls(
+        validation_url=val_url,
+        confirmation_url=conf_url,
+    )
+    return {
+        "status": "success",
+        "detail": "Daraja C2B URLs registered successfully",
+        "validation_url": val_url,
+        "confirmation_url": conf_url,
+        "daraja_response": resp,
     }
 
 

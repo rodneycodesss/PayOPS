@@ -375,3 +375,128 @@ async def test_tuma_native_callback_and_idempotency(
     assert len(payments) == 1
     assert payments[0].status == "SUCCEEDED"
     assert payments[0].amount == Decimal("3200.00")
+
+
+@pytest.mark.asyncio
+async def test_daraja_paybill_and_till_configuration_and_stk(
+    db_session: AsyncSession,
+    client: AsyncClient,
+    tenant_a: dict,
+):
+    """
+    Tests Safaricom Daraja configuration for Paybill & Buy Goods Till,
+    STK Push initiation through Daraja rail, and C2B URL registration.
+    """
+    token = tenant_a["access_token"]
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    tenant_id = tenant_a["tenant"].id
+
+    # 1. Configure Daraja Paybill
+    res_paybill = await client.post(
+        "/api/v1/payments/providers",
+        headers=headers,
+        json={
+            "provider_type": "DARAJA_PAYBILL",
+            "name": "Safaricom M-PESA Paybill",
+            "identifier": "174379",
+            "consumer_key": "live_daraja_consumer_key_xyz",
+            "consumer_secret": "live_daraja_consumer_secret_abc",
+            "passkey": "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
+            "is_sandbox": False,
+        },
+    )
+    assert res_paybill.status_code == 200, res_paybill.text
+    pb_data = res_paybill.json()
+    assert pb_data["provider_type"] == "DARAJA_PAYBILL"
+    assert pb_data["verification_status"] == "live_production"
+
+    # 2. Configure Daraja Till (Buy Goods)
+    res_till = await client.post(
+        "/api/v1/payments/providers",
+        headers=headers,
+        json={
+            "provider_type": "DARAJA_TILL",
+            "name": "Safaricom M-PESA Buy Goods Till",
+            "identifier": "5521234",
+            "consumer_key": "sandbox_key_till",
+            "consumer_secret": "sandbox_secret_till",
+            "is_sandbox": True,
+        },
+    )
+    assert res_till.status_code == 200, res_till.text
+    till_data = res_till.json()
+    assert till_data["provider_type"] == "DARAJA_TILL"
+    assert till_data["verification_status"] == "verified_sandbox"
+
+    # 3. List providers
+    list_provs = await client.get("/api/v1/payments/providers", headers=headers)
+    assert list_provs.status_code == 200
+    provs = list_provs.json()
+    types = [p["provider_type"] for p in provs]
+    assert "DARAJA_PAYBILL" in types
+    assert "DARAJA_TILL" in types
+
+    # 4. Initiate STK Push explicitly via Daraja Paybill
+    stk_res = await client.post(
+        "/api/v1/payments/stk-push",
+        headers=headers,
+        json={
+            "phone_number": "254712345678",
+            "amount": "1500.00",
+            "account_reference": "INV-DARAJA-01",
+            "provider": "DARAJA_PAYBILL",
+        },
+    )
+    assert stk_res.status_code == 200, stk_res.text
+    stk_data = stk_res.json()
+    assert stk_data["checkout_request_id"] is not None
+
+    # Verify payment record in DB has provider "DARAJA"
+    stmt = select(Payment).where(Payment.id == stk_data["payment_id"])
+    pmt = (await db_session.execute(stmt)).scalar_one()
+    assert pmt.provider == "DARAJA"
+    assert pmt.status == "INITIATED"
+
+    # 5. Register C2B URLs with Safaricom Daraja
+    reg_res = await client.post("/api/v1/payments/daraja/register-c2b", headers=headers)
+    assert reg_res.status_code == 200, reg_res.text
+    assert reg_res.json()["status"] == "success"
+    assert "c2b-validation" in reg_res.json()["validation_url"]
+    assert "c2b-confirmation" in reg_res.json()["confirmation_url"]
+
+
+@pytest.mark.asyncio
+async def test_all_tuma_supported_banks(
+    client: AsyncClient,
+    tenant_a: dict,
+):
+    """
+    Tests that /tuma/banks returns all commercial banks, microfinance banks,
+    and SACCOs supported in Kenya by Tuma API.
+    """
+    token = tenant_a["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = await client.get("/api/v1/tuma/banks", headers=headers)
+    assert res.status_code == 200, res.text
+    banks = res.json()
+    assert isinstance(banks, list)
+    assert len(banks) >= 37
+
+    # Check key banks and codes exist
+    bank_names = [b["name"] for b in banks]
+    bank_codes = [b.get("code") for b in banks]
+    assert any("Equity" in name for name in bank_names)
+    assert any("Kenya Commercial Bank" in name or "KCB" in name or code == "KCB" for name, code in zip(bank_names, bank_codes))
+    assert any("Cooperative" in name or "Co-operative" in name or code == "COOP" for name, code in zip(bank_names, bank_codes))
+    assert any("NCBA" in name or code == "NCBA" for name, code in zip(bank_names, bank_codes))
+    assert any("Absa" in name or code == "ABSA" for name, code in zip(bank_names, bank_codes))
+    assert any("Standard Chartered" in name or code == "SCB" for name, code in zip(bank_names, bank_codes))
+    assert any("Stanbic" in name or code == "STANBIC" for name, code in zip(bank_names, bank_codes))
+    assert any("DTB" in name or "Diamond Trust" in name or code == "DTB" for name, code in zip(bank_names, bank_codes))
+    assert any("I&M" in name or code == "I&M" for name, code in zip(bank_names, bank_codes))
+    assert any("Family" in name or code == "FAMILY" for name, code in zip(bank_names, bank_codes))
+    assert any("Post" in name or code == "POSTBANK" for name, code in zip(bank_names, bank_codes))
+    assert any("Sacco" in name for name in bank_names)
+    assert any("M-PESA" in name or code in ("PAYBILL", "BUYGOODS") for name, code in zip(bank_names, bank_codes))
+

@@ -1,3 +1,4 @@
+import os
 import asyncio
 from typing import AsyncGenerator
 import pytest
@@ -6,7 +7,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+os.environ["APP_ENV"] = "test"
+
 from app.core.config import settings
+settings.APP_ENV = "test"
 from app.core.database import Base, get_db
 from app.main import app
 from app.models import *

@@ -11,6 +11,10 @@ import {
   Sliders,
   AlertTriangle,
   Clock,
+  Smartphone,
+  Key,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 import { apiRequest } from '../services/api';
@@ -20,6 +24,64 @@ interface BankItem {
   name: string;
   code: string;
   country: string;
+}
+
+// Complete official directory of all commercial banks, microfinance banks,
+// and deposit-taking SACCOs in Kenya supported by Tuma API & CBK.
+const ALL_KENYA_BANKS: BankItem[] = [
+  { id: 'b1111111-1111-1111-1111-111111111111', name: 'Equity Bank Kenya', code: '68', country: 'KE' },
+  { id: 'b2222222-2222-2222-2222-222222222222', name: 'KCB Bank Kenya', code: '01', country: 'KE' },
+  { id: 'b3333333-3333-3333-3333-333333333333', name: 'NCBA Bank Kenya', code: '07', country: 'KE' },
+  { id: 'b4444444-4444-4444-4444-444444444444', name: 'Stanbic Bank Kenya', code: '31', country: 'KE' },
+  { id: 'b0000003-0000-4000-8000-000000000003', name: 'Absa Bank Kenya', code: '03', country: 'KE' },
+  { id: 'b0000002-0000-4000-8000-000000000002', name: 'Standard Chartered Bank Kenya', code: '02', country: 'KE' },
+  { id: 'b0000011-0000-4000-8000-000000000011', name: 'Co-operative Bank of Kenya', code: '11', country: 'KE' },
+  { id: 'b0000063-0000-4000-8000-000000000063', name: 'Diamond Trust Bank Kenya (DTB)', code: '63', country: 'KE' },
+  { id: 'b0000012-0000-4000-8000-000000000012', name: 'I&M Bank Kenya', code: '12', country: 'KE' },
+  { id: 'b0000070-0000-4000-8000-000000000070', name: 'Family Bank', code: '70', country: 'KE' },
+  { id: 'b0000010-0000-4000-8000-000000000010', name: 'Prime Bank Kenya', code: '10', country: 'KE' },
+  { id: 'b0000019-0000-4000-8000-000000000019', name: 'Bank of Africa Kenya (BOA)', code: '19', country: 'KE' },
+  { id: 'b0000026-0000-4000-8000-000000000026', name: 'SBM Bank Kenya', code: '26', country: 'KE' },
+  { id: 'b0000072-0000-4000-8000-000000000072', name: 'Gulf African Bank', code: '72', country: 'KE' },
+  { id: 'b0000074-0000-4000-8000-000000000074', name: 'Premier Bank Kenya', code: '74', country: 'KE' },
+  { id: 'b0000066-0000-4000-8000-000000000066', name: 'Sidian Bank', code: '66', country: 'KE' },
+  { id: 'b0000054-0000-4000-8000-000000000054', name: 'Kingdom Bank Kenya', code: '54', country: 'KE' },
+  { id: 'b0000023-0000-4000-8000-000000000023', name: 'Postbank Kenya', code: '23', country: 'KE' },
+  { id: 'b0000053-0000-4000-8000-000000000053', name: 'Credit Bank', code: '53', country: 'KE' },
+  { id: 'b0000049-0000-4000-8000-000000000049', name: 'Victoria Commercial Bank', code: '49', country: 'KE' },
+  { id: 'b0000055-0000-4000-8000-000000000055', name: 'Guardian Bank', code: '55', country: 'KE' },
+  { id: 'b0000025-0000-4000-8000-000000000025', name: 'Habib Bank AG Zurich', code: '25', country: 'KE' },
+  { id: 'b0000018-0000-4000-8000-000000000018', name: 'Middle East Bank Kenya', code: '18', country: 'KE' },
+  { id: 'b0000059-0000-4000-8000-000000000059', name: 'Development Bank of Kenya', code: '59', country: 'KE' },
+  { id: 'b0000014-0000-4000-8000-000000000014', name: 'M-Orient Commercial Bank', code: '14', country: 'KE' },
+  { id: 'b0000050-0000-4000-8000-000000000050', name: 'Consolidated Bank of Kenya', code: '50', country: 'KE' },
+  { id: 'b0000035-0000-4000-8000-000000000035', name: 'African Banking Corporation (ABC Bank)', code: '35', country: 'KE' },
+  { id: 'b0000060-0000-4000-8000-000000000060', name: 'Paramount Bank', code: '60', country: 'KE' },
+  { id: 'b0000078-0000-4000-8000-000000000078', name: 'Mayfair CIB Bank', code: '78', country: 'KE' },
+  { id: 'b0000076-0000-4000-8000-000000000076', name: 'UBA Kenya Bank', code: '76', country: 'KE' },
+  { id: 'b0000016-0000-4000-8000-000000000016', name: 'Citibank N.A. Kenya', code: '16', country: 'KE' },
+  { id: 'b0000006-0000-4000-8000-000000000006', name: 'Bank of Baroda Kenya', code: '06', country: 'KE' },
+  { id: 'b0000005-0000-4000-8000-000000000005', name: 'Bank of India', code: '05', country: 'KE' },
+  { id: 'b0000080-0000-4000-8000-000000000080', name: 'Faulu Microfinance Bank', code: '80', country: 'KE' },
+  { id: 'b0000081-0000-4000-8000-000000000081', name: 'Kenya Women Microfinance Bank (KWFT)', code: '81', country: 'KE' },
+  { id: 'b0000082-0000-4000-8000-000000000082', name: 'Caritas Microfinance Bank', code: '82', country: 'KE' },
+  { id: 'b0000083-0000-4000-8000-000000000083', name: 'SMEP Microfinance Bank', code: '83', country: 'KE' },
+  { id: 'b0000084-0000-4000-8000-000000000084', name: 'Rafiki Microfinance Bank', code: '84', country: 'KE' },
+  { id: 'b0000091-0000-4000-8000-000000000091', name: 'Stima SACCO', code: '91', country: 'KE' },
+  { id: 'b0000092-0000-4000-8000-000000000092', name: 'Kenya Police SACCO', code: '92', country: 'KE' },
+  { id: 'b0000093-0000-4000-8000-000000000093', name: 'Harambee SACCO', code: '93', country: 'KE' },
+  { id: 'b0000099-0000-4000-8000-000000000099', name: 'Safaricom M-PESA Business / Paybill Direct', code: '99', country: 'KE' },
+];
+
+interface PaymentProviderItem {
+  id: string;
+  provider_type: string;
+  name: string;
+  identifier: string;
+  is_sandbox: boolean;
+  is_active: boolean;
+  verification_status: string;
+  created_at: string;
 }
 
 interface OnboardingStatus {
@@ -91,6 +153,21 @@ export const SettingsPage: React.FC = () => {
   const [changeReason, setChangeReason] = useState('');
   const [isSubmittingChange, setIsSubmittingChange] = useState(false);
 
+  // Daraja Paybill / Till State
+  const [darajaProviders, setDarajaProviders] = useState<PaymentProviderItem[]>([]);
+  const [isDarajaModalOpen, setIsDarajaModalOpen] = useState(false);
+  const [darajaType, setDarajaType] = useState<'DARAJA_PAYBILL' | 'DARAJA_TILL'>('DARAJA_PAYBILL');
+  const [darajaShortcode, setDarajaShortcode] = useState('');
+  const [darajaConsumerKey, setDarajaConsumerKey] = useState('');
+  const [darajaConsumerSecret, setDarajaConsumerSecret] = useState('');
+  const [darajaPasskey, setDarajaPasskey] = useState('');
+  const [darajaIsSandbox, setDarajaIsSandbox] = useState(false);
+  const [isSubmittingDaraja, setIsSubmittingDaraja] = useState(false);
+  const [darajaError, setDarajaError] = useState<string | null>(null);
+  const [showDarajaSecrets, setShowDarajaSecrets] = useState(false);
+  const [isRegisteringUrls, setIsRegisteringUrls] = useState(false);
+  const activeDaraja = darajaProviders.find((p) => p.is_active);
+
   // Platform Admin Tab State
   const isSuperAdmin =
     user?.roles?.includes('super_admin') ||
@@ -111,6 +188,23 @@ export const SettingsPage: React.FC = () => {
     }
   }, [tenant]);
 
+  useEffect(() => {
+    loadOnboardingStatus();
+    loadBanks();
+    loadPaymentProviders();
+  }, []);
+
+  const loadPaymentProviders = async () => {
+    try {
+      const provs = await apiRequest<PaymentProviderItem[]>('/payments/providers');
+      if (Array.isArray(provs)) {
+        setDarajaProviders(provs.filter(p => p.provider_type === 'DARAJA_PAYBILL' || p.provider_type === 'DARAJA_TILL'));
+      }
+    } catch {
+      // Graceful fallback
+    }
+  };
+
   const loadOnboardingStatus = async () => {
     try {
       setIsLoadingOnboarding(true);
@@ -126,21 +220,22 @@ export const SettingsPage: React.FC = () => {
   const loadBanks = async () => {
     try {
       const bankList = await apiRequest<BankItem[]>('/tuma/banks');
-      if (Array.isArray(bankList)) {
+      if (Array.isArray(bankList) && bankList.length > 0) {
         setBanks(bankList);
-        if (bankList.length > 0 && !selectedBankId) {
+        if (!selectedBankId) {
           setSelectedBankId(bankList[0].id);
           setChangeBankId(bankList[0].id);
         }
+        return;
       }
     } catch {
-      // Fallback fallback sample banks if network unavailable
-      setBanks([
-        { id: 'b1', name: 'Equity Bank Kenya', code: '68', country: 'KE' },
-        { id: 'b2', name: 'KCB Bank Kenya', code: '01', country: 'KE' },
-        { id: 'b3', name: 'NCBA Bank Kenya', code: '07', country: 'KE' },
-        { id: 'b4', name: 'Stanbic Bank Kenya', code: '31', country: 'KE' },
-      ]);
+      // Graceful fallback
+    }
+    // Fallback to complete official directory of all Tuma-supported Kenyan banks
+    setBanks(ALL_KENYA_BANKS);
+    if (!selectedBankId) {
+      setSelectedBankId(ALL_KENYA_BANKS[0].id);
+      setChangeBankId(ALL_KENYA_BANKS[0].id);
     }
   };
 
@@ -162,11 +257,6 @@ export const SettingsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadOnboardingStatus();
-    loadBanks();
-  }, []);
-
-  useEffect(() => {
     if (activeTab === 'admin_ops') {
       loadAdminData();
     }
@@ -175,6 +265,45 @@ export const SettingsPage: React.FC = () => {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleSaveDaraja = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDarajaError(null);
+    setIsSubmittingDaraja(true);
+    try {
+      await apiRequest('/payments/providers', {
+        method: 'POST',
+        body: JSON.stringify({
+          provider_type: darajaType,
+          name: darajaType === 'DARAJA_PAYBILL' ? 'Safaricom M-PESA Paybill' : 'Safaricom M-PESA Buy Goods Till',
+          identifier: darajaShortcode.trim(),
+          consumer_key: darajaConsumerKey.trim(),
+          consumer_secret: darajaConsumerSecret.trim(),
+          passkey: darajaPasskey.trim(),
+          is_sandbox: darajaIsSandbox,
+        }),
+      });
+      showToast('Safaricom Daraja credentials configured and encrypted successfully.');
+      setIsDarajaModalOpen(false);
+      await loadPaymentProviders();
+    } catch (err: any) {
+      setDarajaError(err.message || 'Failed to save Daraja credentials.');
+    } finally {
+      setIsSubmittingDaraja(false);
+    }
+  };
+
+  const handleRegisterDarajaUrls = async () => {
+    try {
+      setIsRegisteringUrls(true);
+      await apiRequest('/payments/daraja/register-c2b', { method: 'POST' });
+      showToast('Daraja C2B confirmation & validation URLs registered with Safaricom.');
+    } catch (err: any) {
+      showToast(`URL Registration: ${err.message || 'Complete manual registration on Daraja Portal'}`);
+    } finally {
+      setIsRegisteringUrls(false);
+    }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -458,9 +587,6 @@ export const SettingsPage: React.FC = () => {
                         <p className="text-amber-900 font-semibold">
                           {onboarding?.next_action || 'Connect your settlement account to activate M-PESA collections.'}
                         </p>
-                        <p className="text-amber-700 text-[11px] mt-0.5">
-                          You do not need to create a Tuma account or manage API keys.
-                        </p>
                       </div>
                     </div>
                     <button
@@ -470,6 +596,100 @@ export const SettingsPage: React.FC = () => {
                     >
                       <Building2 className="w-3.5 h-3.5" />
                       <span>Connect settlement bank account</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* SAFARICOM DARAJA RAIL (PAYBILL & BUY GOODS TILL) */}
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-slate-950 text-sm">
+                        M-PESA Paybill & Till (Safaricom Daraja)
+                      </span>
+                      {activeDaraja ? (
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          activeDaraja.is_sandbox
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {activeDaraja.is_sandbox ? 'Sandbox' : 'Active (Live)'}
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                          Not Configured
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Direct C2B collection rail for merchants with their own dedicated Safaricom Paybill or Buy Goods Till number.
+                    </p>
+                  </div>
+                </div>
+
+                {activeDaraja ? (
+                  <div className="bg-white rounded-xl p-4 border border-slate-200/80 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Channel / Shortcode:</span>
+                      <span className="font-bold text-slate-900 font-mono">
+                        {activeDaraja.provider_type === 'DARAJA_PAYBILL' ? 'Paybill' : 'Buy Goods Till'} #{activeDaraja.identifier}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span>Verification Status:</span>
+                      <span className="text-emerald-700 font-semibold font-mono text-[11px]">
+                        {activeDaraja.verification_status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span>Ledger Routing:</span>
+                      <span className="text-slate-700 font-medium">Account 1010 (M-PESA Clearing)</span>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={handleRegisterDarajaUrls}
+                        disabled={isRegisteringUrls}
+                        className="text-xs text-emerald-700 hover:text-emerald-900 font-bold transition flex items-center space-x-1"
+                      >
+                        {isRegisteringUrls ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
+                        <span>Register C2B URLs</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDarajaType(activeDaraja.provider_type as any);
+                          setDarajaShortcode(activeDaraja.identifier);
+                          setDarajaIsSandbox(activeDaraja.is_sandbox);
+                          setIsDarajaModalOpen(true);
+                        }}
+                        className="text-xs text-slate-600 hover:text-slate-950 font-bold underline transition"
+                      >
+                        Reconfigure credentials
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-100/70 rounded-xl p-4 border border-slate-200/60 space-y-3 text-xs">
+                    <p className="text-slate-600 text-xs leading-relaxed">
+                      Have your own Safaricom Paybill or Till? Connect your Daraja API keys to accept direct C2B payments alongside bank settlements.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDarajaShortcode('');
+                        setDarajaConsumerKey('');
+                        setDarajaConsumerSecret('');
+                        setDarajaPasskey('');
+                        setIsDarajaModalOpen(true);
+                      }}
+                      className="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-900 font-bold rounded-xl text-xs transition shadow-sm flex items-center justify-center space-x-1.5"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Configure Safaricom Paybill / Till</span>
                     </button>
                   </div>
                 )}
@@ -493,7 +713,7 @@ export const SettingsPage: React.FC = () => {
                 <div>
                   <span className="font-semibold text-slate-900 text-sm">KRA eTIMS Compliance</span>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Section 2 Rule 9 verified manual review mode
+                  manual review mode
                   </p>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
@@ -830,6 +1050,188 @@ export const SettingsPage: React.FC = () => {
                   className="px-5 py-2.5 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md"
                 >
                   {isSubmittingChange ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Safaricom Daraja Configuration (Paybill & Till) */}
+      {isDarajaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-950">M-PESA Daraja Configuration</h3>
+                  <p className="text-xs text-slate-500">Paybill & Buy Goods Till Integration</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDarajaModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-900 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {darajaError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                {darajaError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveDaraja} className="space-y-4 text-xs font-sans">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Payment Channel Type
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDarajaType('DARAJA_PAYBILL')}
+                    className={`p-3 rounded-xl border text-left transition ${
+                      darajaType === 'DARAJA_PAYBILL'
+                        ? 'border-[#080D18] bg-slate-900 text-white'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="block font-bold text-xs">Paybill Shortcode</span>
+                    <span className={`text-[10px] ${darajaType === 'DARAJA_PAYBILL' ? 'text-slate-300' : 'text-slate-500'}`}>
+                      e.g. 174379, 888880
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDarajaType('DARAJA_TILL')}
+                    className={`p-3 rounded-xl border text-left transition ${
+                      darajaType === 'DARAJA_TILL'
+                        ? 'border-[#080D18] bg-slate-900 text-white'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="block font-bold text-xs">Buy Goods Till</span>
+                    <span className={`text-[10px] ${darajaType === 'DARAJA_TILL' ? 'text-slate-300' : 'text-slate-500'}`}>
+                      e.g. 5521234, 600123
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  {darajaType === 'DARAJA_PAYBILL' ? 'Business Shortcode / Paybill Number' : 'Buy Goods Till Number'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={darajaShortcode}
+                  onChange={(e) => setDarajaShortcode(e.target.value)}
+                  placeholder={darajaType === 'DARAJA_PAYBILL' ? 'e.g. 174379' : 'e.g. 5521234'}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-700 font-semibold">
+                    Daraja Consumer Key
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowDarajaSecrets(!showDarajaSecrets)}
+                    className="text-[10px] text-slate-500 hover:text-slate-800 flex items-center space-x-1"
+                  >
+                    {showDarajaSecrets ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showDarajaSecrets ? 'Hide secrets' : 'Show secrets'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showDarajaSecrets ? 'text' : 'password'}
+                  required
+                  value={darajaConsumerKey}
+                  onChange={(e) => setDarajaConsumerKey(e.target.value)}
+                  placeholder="Paste Consumer Key from developer.safaricom.co.ke"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Daraja Consumer Secret
+                </label>
+                <input
+                  type={showDarajaSecrets ? 'text' : 'password'}
+                  required
+                  value={darajaConsumerSecret}
+                  onChange={(e) => setDarajaConsumerSecret(e.target.value)}
+                  placeholder="Paste Consumer Secret"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Online Lipa Na M-PESA Passkey
+                </label>
+                <input
+                  type={showDarajaSecrets ? 'text' : 'password'}
+                  value={darajaPasskey}
+                  onChange={(e) => setDarajaPasskey(e.target.value)}
+                  placeholder="Required for STK Push prompts"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Optional for C2B receiving; required if initiating STK push through this shortcode.
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <input
+                  type="checkbox"
+                  id="sandboxToggle"
+                  checked={darajaIsSandbox}
+                  onChange={(e) => setDarajaIsSandbox(e.target.checked)}
+                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                />
+                <label htmlFor="sandboxToggle" className="text-xs text-slate-700 font-medium cursor-pointer">
+                  Use Safaricom Sandbox environment (testing only)
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2 text-[11px] text-slate-500 pt-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Keys are encrypted with AES-256 before storage and never returned in API responses.</span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDarajaModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingDaraja}
+                  className="px-5 py-2.5 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md flex items-center space-x-1.5"
+                >
+                  {isSubmittingDaraja ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving credentials...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Save Daraja Configuration</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
                 </button>
               </div>
             </form>

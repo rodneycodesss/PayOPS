@@ -18,8 +18,8 @@ export const ProductsPage: React.FC = () => {
     {
       id: 'prod-1',
       name: 'Service A',
-      price: '10,000',
-      taxType: 'Standard VAT 16%',
+      price: '1',
+      taxType: 'Exempt',
     },
     {
       id: 'prod-2',

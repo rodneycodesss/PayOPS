@@ -10,6 +10,7 @@ class StkPushRequest(BaseModel):
     account_reference: str = Field(..., min_length=1, max_length=50, description="e.g. Invoice number INV-001 or Account ID")
     transaction_desc: Optional[str] = Field("Payment via Rodstar PayOps", max_length=100)
     account_alias: Optional[str] = Field(None, max_length=50, description="Optional secondary settlement destination alias")
+    provider: Optional[str] = Field(None, description="Optional provider override: TUMA_MPESA, DARAJA, DARAJA_PAYBILL, DARAJA_TILL")
 
 
 class StkPushResponse(BaseModel):

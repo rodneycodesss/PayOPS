@@ -75,13 +75,13 @@ class Settings(BaseSettings):
     TUMA_CALLBACK_URL: Optional[str] = Field(default=None, description="Tuma Webhook Public Callback URL")
     TUMA_IS_SANDBOX: bool = Field(default=False, description="Set to True for Sandbox/Simulated mode")
 
-    # Deprecated Daraja compatibility fields
-    DARAJA_IS_SANDBOX: bool = Field(default=False, description="Deprecated Daraja sandbox flag")
-    DARAJA_CONSUMER_KEY: Optional[str] = Field(default=None, description="Deprecated")
-    DARAJA_CONSUMER_SECRET: Optional[str] = Field(default=None, description="Deprecated")
-    DARAJA_SHORTCODE: Optional[str] = Field(default=None, description="Deprecated")
-    DARAJA_PASSKEY: Optional[str] = Field(default=None, description="Deprecated")
-    DARAJA_CALLBACK_URL: Optional[str] = Field(default=None, description="Deprecated")
+    # Safaricom Daraja M-PESA Configuration (Paybill & Buy Goods Till)
+    DARAJA_IS_SANDBOX: bool = Field(default=True, description="Set to True for Daraja Sandbox mode")
+    DARAJA_CONSUMER_KEY: Optional[str] = Field(default=None, description="Safaricom Daraja Consumer Key")
+    DARAJA_CONSUMER_SECRET: Optional[str] = Field(default=None, description="Safaricom Daraja Consumer Secret")
+    DARAJA_SHORTCODE: Optional[str] = Field(default="174379", description="Paybill Shortcode or Buy Goods Till Number")
+    DARAJA_PASSKEY: Optional[str] = Field(default=None, description="Lipa Na M-PESA Online Passkey")
+    DARAJA_CALLBACK_URL: Optional[str] = Field(default=None, description="Daraja Public Callback URL")
     DARAJA_SANDBOX_SHORTCODE: str = "174379"
 
     # Base Currency

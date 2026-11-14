@@ -23,9 +23,10 @@ export const PaymentsPage: React.FC = () => {
 
   // STK Push Request state
   const [phone, setPhone] = useState('254712345678');
-  const [amount, setAmount] = useState('1500.00');
+  const [amount, setAmount] = useState('1.00');
   const [reference, setReference] = useState('INV-0045');
-  const [description, setDescription] = useState('Consulting Services Settlement');
+  const [description, setDescription] = useState('Product A / Service A Test');
+  const [selectedProvider, setSelectedProvider] = useState<'AUTO' | 'TUMA_MPESA' | 'DARAJA_PAYBILL' | 'DARAJA_TILL'>('AUTO');
 
   const [payments, setPayments] = useState<PaymentItem[]>([]);
 
@@ -113,20 +114,28 @@ export const PaymentsPage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const payload: any = {
+        phone_number: phone,
+        amount: parseFloat(amount),
+        account_reference: reference,
+        transaction_desc: description,
+      };
+      if (selectedProvider !== 'AUTO') {
+        payload.provider = selectedProvider;
+      }
+
       const res: any = await apiRequest('/payments/stk-push', {
         method: 'POST',
-        body: JSON.stringify({
-          phone_number: phone,
-          amount: parseFloat(amount),
-          account_reference: reference,
-          transaction_desc: description,
-        }),
+        body: JSON.stringify(payload),
       });
 
       // Refetch payments from API
       await fetchPayments();
       setIsModalOpen(false);
-      showToast(`STK Push prompt sent to ${phone} for KSh ${Number(amount).toLocaleString()}`);
+      const railLabel = res?.provider === 'DARAJA' || selectedProvider.startsWith('DARAJA')
+        ? 'Safaricom Daraja'
+        : 'Tuma M-PESA Gateway';
+      showToast(res?.customer_message || `STK Push prompt sent via ${railLabel} to ${phone} for KSh ${Number(amount).toLocaleString()}`);
     } catch (err: any) {
       alert(`Payment dispatch failed: ${err.message}`);
     } finally {
@@ -274,6 +283,22 @@ export const PaymentsPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleStkPush} className="space-y-4 text-xs font-sans">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Payment Gateway Rail
+                </label>
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => setSelectedProvider(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900 bg-white"
+                >
+                  <option value="AUTO">Auto (System Default / Active Gateway)</option>
+                  <option value="TUMA_MPESA">Tuma M-PESA Gateway (Direct Bank Settlement)</option>
+                  <option value="DARAJA_PAYBILL">Safaricom Daraja (Paybill Shortcode)</option>
+                  <option value="DARAJA_TILL">Safaricom Daraja (Buy Goods Till)</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">
                   Customer Safaricom Number (254...)

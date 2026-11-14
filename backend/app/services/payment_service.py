@@ -7,6 +7,7 @@ from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import encrypt_secret, decrypt_secret
+from app.integrations.daraja.client import DarajaClient
 from app.integrations.tuma.client import TumaClient
 from app.models.payments import Payment, PaymentProvider
 from app.models.webhook import WebhookEvent
@@ -35,12 +36,14 @@ class PaymentService:
             select(PaymentProvider)
             .where(
                 PaymentProvider.tenant_id == tenant_id,
-                PaymentProvider.provider_type.in_(["TUMA_MPESA", "TUMA_GATEWAY", "DARAJA_PAYBILL", "DARAJA_TILL"]),
+                PaymentProvider.provider_type.in_(["TUMA_MPESA", "TUMA_GATEWAY"]),
                 PaymentProvider.is_active == True,
             )
+            .order_by(PaymentProvider.created_at.desc())
+            .limit(1)
         )
         res = await db.execute(stmt)
-        provider = res.scalar_one_or_none()
+        provider = res.scalars().first()
 
         if provider and provider.encrypted_credentials:
             try:
@@ -78,8 +81,58 @@ class PaymentService:
         )
         return TumaClient(is_sandbox=is_sandbox, base_url=getattr(settings, "TUMA_BASE_URL", "https://api.tuma.co.ke")), None
 
-    # Backward compatibility alias
-    get_or_create_daraja_client = get_or_create_tuma_client
+    @classmethod
+    async def get_or_create_daraja_client(
+        cls,
+        db: AsyncSession,
+        tenant_id: str,
+        provider_type: Optional[str] = None,
+    ) -> Tuple[DarajaClient, Optional[PaymentProvider]]:
+        """Loads tenant's configured Daraja Paybill or Till provider or falls back to sandbox/env client."""
+        query_types = [provider_type] if provider_type else ["DARAJA_PAYBILL", "DARAJA_TILL"]
+        stmt = (
+            select(PaymentProvider)
+            .where(
+                PaymentProvider.tenant_id == tenant_id,
+                PaymentProvider.provider_type.in_(query_types),
+                PaymentProvider.is_active == True,
+            )
+            .order_by(PaymentProvider.created_at.desc())
+            .limit(1)
+        )
+        res = await db.execute(stmt)
+        provider = res.scalars().first()
+
+        if provider and provider.encrypted_credentials:
+            try:
+                creds = json.loads(decrypt_secret(provider.encrypted_credentials))
+                client = DarajaClient(
+                    consumer_key=creds.get("consumer_key") or creds.get("api_key"),
+                    consumer_secret=creds.get("consumer_secret") or creds.get("email"),
+                    shortcode=provider.identifier,
+                    passkey=creds.get("passkey") or creds.get("account_alias"),
+                    is_sandbox=provider.is_sandbox,
+                    provider_type=provider.provider_type,
+                )
+                return client, provider
+            except Exception:
+                pass
+
+        # Check global environment settings
+        from app.core.config import settings
+        if getattr(settings, "DARAJA_CONSUMER_KEY", None) and getattr(settings, "DARAJA_CONSUMER_SECRET", None):
+            client = DarajaClient(
+                consumer_key=settings.DARAJA_CONSUMER_KEY,
+                consumer_secret=settings.DARAJA_CONSUMER_SECRET,
+                shortcode=getattr(settings, "DARAJA_SHORTCODE", "174379"),
+                passkey=getattr(settings, "DARAJA_PASSKEY", ""),
+                is_sandbox=getattr(settings, "DARAJA_IS_SANDBOX", False),
+                provider_type=provider_type or "DARAJA_PAYBILL",
+            )
+            return client, None
+
+        # Fallback sandbox client
+        return DarajaClient(is_sandbox=True, provider_type=provider_type or "DARAJA_PAYBILL"), None
 
     @classmethod
     async def initiate_stk_push(
@@ -87,58 +140,123 @@ class PaymentService:
         db: AsyncSession,
         tenant_id: str,
         request: StkPushRequest,
-        callback_url: str = "http://backend:8000/api/v1/payments/tuma/callback",
+        callback_url: Optional[str] = None,
     ) -> StkPushResponse:
         """
-        Initiates an STK Push prompt to the payer's mobile phone via Tuma API and creates
-        an INITIATED payment record with checkout_request_id.
+        Initiates an STK Push prompt to the payer's mobile phone via either
+        Tuma Gateway (direct bank settlement) or Safaricom Daraja (Paybill / Till),
+        and creates an INITIATED payment record.
         """
-        client, provider = await cls.get_or_create_tuma_client(db, tenant_id)
+        requested_provider = (request.provider or "").upper()
+        use_daraja = requested_provider in ("DARAJA", "DARAJA_PAYBILL", "DARAJA_TILL")
 
-        # Call Tuma client
-        resp = await client.initiate_stk_push(
-            phone_number=request.phone_number,
-            amount=request.amount,
-            account_reference=request.account_reference,
-            transaction_desc=request.transaction_desc or "Payment",
-            callback_url=callback_url,
-            account=request.account_alias,
-        )
+        # If not explicitly specified, check if tenant has a configured Daraja provider
+        if not request.provider:
+            stmt = (
+                select(PaymentProvider)
+                .where(
+                    PaymentProvider.tenant_id == tenant_id,
+                    PaymentProvider.provider_type.in_(["DARAJA_PAYBILL", "DARAJA_TILL"]),
+                    PaymentProvider.is_active == True,
+                )
+                .order_by(PaymentProvider.created_at.desc())
+                .limit(1)
+            )
+            res = await db.execute(stmt)
+            daraja_prov = res.scalars().first()
+            if daraja_prov:
+                use_daraja = True
 
-        checkout_request_id = resp.get("checkout_request_id") or resp.get("CheckoutRequestID") or f"ws_CO_{int(datetime.now().timestamp())}"
-        merchant_request_id = resp.get("merchant_request_id") or resp.get("MerchantRequestID")
+        if use_daraja:
+            daraja_type = request.provider if request.provider in ("DARAJA_PAYBILL", "DARAJA_TILL") else None
+            daraja_client, provider = await cls.get_or_create_daraja_client(db, tenant_id, provider_type=daraja_type)
+            cb_url = callback_url or "http://backend:8000/api/v1/payments/daraja/callback"
+            resp = await daraja_client.initiate_stk_push(
+                phone_number=request.phone_number,
+                amount=request.amount,
+                account_reference=request.account_reference,
+                transaction_desc=request.transaction_desc or "Payment",
+                callback_url=cb_url,
+            )
+            checkout_request_id = resp.get("CheckoutRequestID") or resp.get("checkout_request_id") or f"ws_CO_{int(datetime.now().timestamp())}"
+            merchant_request_id = resp.get("MerchantRequestID") or resp.get("merchant_request_id")
 
-        # Create INITIATED payment record
-        payment = Payment(
-            tenant_id=tenant_id,
-            provider="TUMA_MPESA",
-            provider_reference=checkout_request_id,  # Temporary reference until receipt is known
-            checkout_request_id=checkout_request_id,
-            status="INITIATED",
-            amount=request.amount,
-            allocated_amount=Decimal("0.00"),
-            unallocated_amount=request.amount,
-            currency="KES",
-            sender_phone=request.phone_number,
-            account_reference=request.account_reference,
-            metadata_json={
-                "merchant_request_id": merchant_request_id,
-                "is_sandbox": client.is_sandbox,
-                "is_simulated": resp.get("is_simulated", False),
-            },
-        )
-        db.add(payment)
-        await db.commit()
-        await db.refresh(payment)
+            payment = Payment(
+                tenant_id=tenant_id,
+                provider="DARAJA",
+                provider_reference=checkout_request_id,
+                checkout_request_id=checkout_request_id,
+                status="INITIATED",
+                amount=request.amount,
+                allocated_amount=Decimal("0.00"),
+                unallocated_amount=request.amount,
+                currency="KES",
+                sender_phone=request.phone_number,
+                account_reference=request.account_reference,
+                metadata_json={
+                    "merchant_request_id": merchant_request_id,
+                    "provider_type": provider.provider_type if provider else "DARAJA_PAYBILL",
+                    "is_sandbox": daraja_client.is_sandbox,
+                    "is_simulated": resp.get("is_simulated", False),
+                },
+            )
+            db.add(payment)
+            await db.commit()
+            await db.refresh(payment)
 
-        return StkPushResponse(
-            payment_id=payment.id,
-            checkout_request_id=checkout_request_id,
-            merchant_request_id=merchant_request_id,
-            status=payment.status,
-            customer_message=resp.get("customer_message") or resp.get("CustomerMessage", "Payment initiated"),
-            is_simulated=resp.get("is_simulated", False),
-        )
+            return StkPushResponse(
+                payment_id=payment.id,
+                checkout_request_id=checkout_request_id,
+                merchant_request_id=merchant_request_id,
+                status=payment.status,
+                customer_message=resp.get("CustomerMessage") or resp.get("customer_message", "Payment initiated via Safaricom Daraja"),
+                is_simulated=resp.get("is_simulated", False),
+            )
+        else:
+            tuma_client, provider = await cls.get_or_create_tuma_client(db, tenant_id)
+            cb_url = callback_url or "http://backend:8000/api/v1/payments/tuma/callback"
+            resp = await tuma_client.initiate_stk_push(
+                phone_number=request.phone_number,
+                amount=request.amount,
+                account_reference=request.account_reference,
+                transaction_desc=request.transaction_desc or "Payment",
+                callback_url=cb_url,
+                account=request.account_alias,
+            )
+
+            checkout_request_id = resp.get("checkout_request_id") or resp.get("CheckoutRequestID") or f"ws_CO_{int(datetime.now().timestamp())}"
+            merchant_request_id = resp.get("merchant_request_id") or resp.get("MerchantRequestID")
+
+            payment = Payment(
+                tenant_id=tenant_id,
+                provider="TUMA_MPESA",
+                provider_reference=checkout_request_id,
+                checkout_request_id=checkout_request_id,
+                status="INITIATED",
+                amount=request.amount,
+                allocated_amount=Decimal("0.00"),
+                unallocated_amount=request.amount,
+                currency="KES",
+                sender_phone=request.phone_number,
+                account_reference=request.account_reference,
+                metadata_json={
+                    "merchant_request_id": merchant_request_id,
+                    "is_sandbox": tuma_client.is_sandbox,
+                    "is_simulated": resp.get("is_simulated", False),
+                },
+            )
+            db.add(payment)
+            await db.commit()
+            await db.refresh(payment)
+
+            return StkPushResponse(
+                payment_id=payment.id,
+                checkout_request_id=checkout_request_id,
+                merchant_request_id=merchant_request_id,
+                status=payment.status,
+                customer_message=resp.get("customer_message") or resp.get("CustomerMessage", "Payment initiated via Tuma Gateway"),
+                is_simulated=resp.get("is_simulated", False),
+            )
 
     @classmethod
     async def process_tuma_callback(
@@ -317,7 +435,7 @@ class PaymentService:
         # 2. Store Webhook Event
         event = WebhookEvent(
             tenant_id=tenant_id,
-            provider="TUMA",
+            provider="DARAJA",
             event_type="C2B_CONFIRMATION",
             payload=payload.model_dump(mode="json"),
             raw_payload=raw_payload_str,
@@ -332,7 +450,7 @@ class PaymentService:
 
         payment = Payment(
             tenant_id=tenant_id,
-            provider="TUMA_MPESA",
+            provider="DARAJA",
             provider_reference=payload.TransID,
             status="SUCCEEDED",
             amount=payload.TransAmount,
