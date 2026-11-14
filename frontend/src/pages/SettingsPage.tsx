@@ -869,83 +869,85 @@ export const SettingsPage: React.FC = () => {
 
       {/* MODAL 1: Settlement Connection Wizard */}
       {isWizardOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 text-slate-900 max-h-[88vh] flex flex-col my-auto animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center space-x-2.5">
                 <div className="w-8 h-8 rounded-xl bg-[#16A6D9]/10 text-[#16A6D9] flex items-center justify-center font-bold">
                   <Building2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-950">Connect Settlement Account</h3>
+                  <h3 className="text-base font-extrabold text-slate-950">Connect Settlement Account</h3>
                   <p className="text-xs text-slate-500">M-PESA Collections Direct to Bank</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsWizardOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-900 transition"
+                className="p-1.5 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {wizardError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+              <div className="mt-2.5 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs shrink-0">
                 {wizardError}
               </div>
             )}
 
-            <form onSubmit={handleConnectSettlement} className="space-y-4 text-xs font-sans">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Commercial Bank (Kenya)
-                </label>
-                <select
-                  value={selectedBankId}
-                  onChange={(e) => setSelectedBankId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900 bg-white"
-                >
-                  {banks.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} (Code: {b.code})
-                    </option>
-                  ))}
-                </select>
+            <form onSubmit={handleConnectSettlement} className="flex flex-col flex-1 min-h-0 mt-3 text-xs font-sans">
+              <div className="overflow-y-auto pr-1.5 space-y-3 flex-1 min-h-0">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Commercial Bank (Kenya)
+                  </label>
+                  <select
+                    value={selectedBankId}
+                    onChange={(e) => setSelectedBankId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm text-slate-900 bg-white"
+                  >
+                    {banks.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} (Code: {b.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Settlement Bank Account Number
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    placeholder="e.g. 0123456789012"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm font-mono text-slate-900"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Minimum 5 digits. Encrypted at rest via AES-256 and never shown in full.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-[11px] text-slate-600 leading-relaxed">
+                  <span className="font-bold text-slate-800">Direct settlement guarantee:</span> Customer payments settle directly into this account. PayOps never holds custody of your funds.
+                </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Settlement Bank Account Number
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="e.g. 0123456789012"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Minimum 5 digits. Encrypted at rest via AES-256 and never shown in full.
-                </p>
-              </div>
-
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-[11px] text-slate-600 leading-relaxed">
-                <span className="font-bold text-slate-800">Direct settlement guarantee:</span> Customer payments settle directly into this account. PayOps never holds custody of your funds.
-              </div>
-
-              <div className="pt-2 flex items-center justify-end space-x-3">
+              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-end space-x-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsWizardOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingSettlement}
-                  className="px-5 py-2.5 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md flex items-center space-x-1.5"
+                  className="px-5 py-2 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md flex items-center space-x-1.5"
                 >
                   {isSubmittingSettlement ? (
                     <>
@@ -967,87 +969,89 @@ export const SettingsPage: React.FC = () => {
 
       {/* MODAL 2: Settlement Change Request (Fraud-Sensitive Step-Up) */}
       {isChangeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 text-slate-900 max-h-[88vh] flex flex-col my-auto animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center space-x-2.5">
                 <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
                   <Lock className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-950">Change Settlement Account</h3>
+                  <h3 className="text-base font-extrabold text-slate-950">Change Settlement Account</h3>
                   <p className="text-xs text-slate-500">Security Verification Required</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsChangeModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-900 transition"
+                className="p-1.5 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleChangeRequest} className="space-y-4 text-xs font-sans">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  New Commercial Bank
-                </label>
-                <select
-                  value={changeBankId}
-                  onChange={(e) => setChangeBankId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900 bg-white"
-                >
-                  {banks.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} (Code: {b.code})
-                    </option>
-                  ))}
-                </select>
+            <form onSubmit={handleChangeRequest} className="flex flex-col flex-1 min-h-0 mt-3 text-xs font-sans">
+              <div className="overflow-y-auto pr-1.5 space-y-3 flex-1 min-h-0">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    New Commercial Bank
+                  </label>
+                  <select
+                    value={changeBankId}
+                    onChange={(e) => setChangeBankId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm text-slate-900 bg-white"
+                  >
+                    {banks.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} (Code: {b.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    New Bank Account Number
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={changeAccountNumber}
+                    onChange={(e) => setChangeAccountNumber(e.target.value)}
+                    placeholder="e.g. 0987654321012"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm font-mono text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Reason for Change
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={changeReason}
+                    onChange={(e) => setChangeReason(e.target.value)}
+                    placeholder="e.g. Switched primary corporate operational account"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs text-slate-900"
+                  />
+                </div>
+
+                <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
+                  <span className="font-bold">Fraud-prevention check:</span> Settlement destination modifications are logged and audited to prevent unauthorized revenue diversion.
+                </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  New Bank Account Number
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={changeAccountNumber}
-                  onChange={(e) => setChangeAccountNumber(e.target.value)}
-                  placeholder="e.g. 0987654321012"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Reason for Change
-                </label>
-                <textarea
-                  rows={2}
-                  value={changeReason}
-                  onChange={(e) => setChangeReason(e.target.value)}
-                  placeholder="e.g. Switched primary corporate operational account"
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs text-slate-900"
-                />
-              </div>
-
-              <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
-                <span className="font-bold">Fraud-prevention check:</span> Settlement destination modifications are logged and audited to prevent unauthorized revenue diversion.
-              </div>
-
-              <div className="pt-2 flex items-center justify-end space-x-3">
+              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-end space-x-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsChangeModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingChange}
-                  className="px-5 py-2.5 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md"
+                  className="px-5 py-2 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md"
                 >
                   {isSubmittingChange ? 'Submitting...' : 'Submit Request'}
                 </button>
@@ -1059,167 +1063,169 @@ export const SettingsPage: React.FC = () => {
 
       {/* MODAL 3: Safaricom Daraja Configuration (Paybill & Till) */}
       {isDarajaModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 text-slate-900 max-h-[88vh] flex flex-col my-auto animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center space-x-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
                   <Smartphone className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-950">M-PESA Daraja Configuration</h3>
+                  <h3 className="text-base font-extrabold text-slate-950">M-PESA Daraja Configuration</h3>
                   <p className="text-xs text-slate-500">Paybill & Buy Goods Till Integration</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsDarajaModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-900 transition"
+                className="p-1.5 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {darajaError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+              <div className="mt-2.5 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs shrink-0">
                 {darajaError}
               </div>
             )}
 
-            <form onSubmit={handleSaveDaraja} className="space-y-4 text-xs font-sans">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Payment Channel Type
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setDarajaType('DARAJA_PAYBILL')}
-                    className={`p-3 rounded-xl border text-left transition ${
-                      darajaType === 'DARAJA_PAYBILL'
-                        ? 'border-[#080D18] bg-slate-900 text-white'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span className="block font-bold text-xs">Paybill Shortcode</span>
-                    <span className={`text-[10px] ${darajaType === 'DARAJA_PAYBILL' ? 'text-slate-300' : 'text-slate-500'}`}>
-                      e.g. 174379, 888880
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDarajaType('DARAJA_TILL')}
-                    className={`p-3 rounded-xl border text-left transition ${
-                      darajaType === 'DARAJA_TILL'
-                        ? 'border-[#080D18] bg-slate-900 text-white'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span className="block font-bold text-xs">Buy Goods Till</span>
-                    <span className={`text-[10px] ${darajaType === 'DARAJA_TILL' ? 'text-slate-300' : 'text-slate-500'}`}>
-                      e.g. 5521234, 600123
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  {darajaType === 'DARAJA_PAYBILL' ? 'Business Shortcode / Paybill Number' : 'Buy Goods Till Number'}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={darajaShortcode}
-                  onChange={(e) => setDarajaShortcode(e.target.value)}
-                  placeholder={darajaType === 'DARAJA_PAYBILL' ? 'e.g. 174379' : 'e.g. 5521234'}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-slate-700 font-semibold">
-                    Daraja Consumer Key
+            <form onSubmit={handleSaveDaraja} className="flex flex-col flex-1 min-h-0 mt-3 text-xs font-sans">
+              <div className="overflow-y-auto pr-1.5 space-y-3 flex-1 min-h-0">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Payment Channel Type
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowDarajaSecrets(!showDarajaSecrets)}
-                    className="text-[10px] text-slate-500 hover:text-slate-800 flex items-center space-x-1"
-                  >
-                    {showDarajaSecrets ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                    <span>{showDarajaSecrets ? 'Hide secrets' : 'Show secrets'}</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDarajaType('DARAJA_PAYBILL')}
+                      className={`p-2.5 rounded-xl border text-left transition ${
+                        darajaType === 'DARAJA_PAYBILL'
+                          ? 'border-[#080D18] bg-slate-900 text-white'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span className="block font-bold text-xs">Paybill Shortcode</span>
+                      <span className={`text-[10px] ${darajaType === 'DARAJA_PAYBILL' ? 'text-slate-300' : 'text-slate-500'}`}>
+                        e.g. 174379, 888880
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDarajaType('DARAJA_TILL')}
+                      className={`p-2.5 rounded-xl border text-left transition ${
+                        darajaType === 'DARAJA_TILL'
+                          ? 'border-[#080D18] bg-slate-900 text-white'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span className="block font-bold text-xs">Buy Goods Till</span>
+                      <span className={`text-[10px] ${darajaType === 'DARAJA_TILL' ? 'text-slate-300' : 'text-slate-500'}`}>
+                        e.g. 5521234, 600123
+                      </span>
+                    </button>
+                  </div>
                 </div>
-                <input
-                  type={showDarajaSecrets ? 'text' : 'password'}
-                  required
-                  value={darajaConsumerKey}
-                  onChange={(e) => setDarajaConsumerKey(e.target.value)}
-                  placeholder="Paste Consumer Key from developer.safaricom.co.ke"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
-                />
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    {darajaType === 'DARAJA_PAYBILL' ? 'Business Shortcode / Paybill Number' : 'Buy Goods Till Number'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={darajaShortcode}
+                    onChange={(e) => setDarajaShortcode(e.target.value)}
+                    placeholder={darajaType === 'DARAJA_PAYBILL' ? 'e.g. 174379' : 'e.g. 5521234'}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs font-mono text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-700 font-semibold">
+                      Daraja Consumer Key
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowDarajaSecrets(!showDarajaSecrets)}
+                      className="text-[10px] text-slate-500 hover:text-slate-800 flex items-center space-x-1"
+                    >
+                      {showDarajaSecrets ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{showDarajaSecrets ? 'Hide secrets' : 'Show secrets'}</span>
+                    </button>
+                  </div>
+                  <input
+                    type={showDarajaSecrets ? 'text' : 'password'}
+                    required
+                    value={darajaConsumerKey}
+                    onChange={(e) => setDarajaConsumerKey(e.target.value)}
+                    placeholder="Paste Consumer Key from developer.safaricom.co.ke"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs font-mono text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Daraja Consumer Secret
+                  </label>
+                  <input
+                    type={showDarajaSecrets ? 'text' : 'password'}
+                    required
+                    value={darajaConsumerSecret}
+                    onChange={(e) => setDarajaConsumerSecret(e.target.value)}
+                    placeholder="Paste Consumer Secret"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs font-mono text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Online Lipa Na M-PESA Passkey
+                  </label>
+                  <input
+                    type={showDarajaSecrets ? 'text' : 'password'}
+                    value={darajaPasskey}
+                    onChange={(e) => setDarajaPasskey(e.target.value)}
+                    placeholder="Required for STK Push prompts"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs font-mono text-slate-900"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Optional for C2B receiving; required if initiating STK push through this shortcode.
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <input
+                    type="checkbox"
+                    id="sandboxToggle"
+                    checked={darajaIsSandbox}
+                    onChange={(e) => setDarajaIsSandbox(e.target.checked)}
+                    className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                  />
+                  <label htmlFor="sandboxToggle" className="text-xs text-slate-700 font-medium cursor-pointer">
+                    Use Safaricom Sandbox environment (testing only)
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 text-[11px] text-slate-500">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Keys are encrypted with AES-256 before storage and never returned in API responses.</span>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Daraja Consumer Secret
-                </label>
-                <input
-                  type={showDarajaSecrets ? 'text' : 'password'}
-                  required
-                  value={darajaConsumerSecret}
-                  onChange={(e) => setDarajaConsumerSecret(e.target.value)}
-                  placeholder="Paste Consumer Secret"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Online Lipa Na M-PESA Passkey
-                </label>
-                <input
-                  type={showDarajaSecrets ? 'text' : 'password'}
-                  value={darajaPasskey}
-                  onChange={(e) => setDarajaPasskey(e.target.value)}
-                  placeholder="Required for STK Push prompts"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Optional for C2B receiving; required if initiating STK push through this shortcode.
-                </p>
-              </div>
-
-              <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <input
-                  type="checkbox"
-                  id="sandboxToggle"
-                  checked={darajaIsSandbox}
-                  onChange={(e) => setDarajaIsSandbox(e.target.checked)}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
-                />
-                <label htmlFor="sandboxToggle" className="text-xs text-slate-700 font-medium cursor-pointer">
-                  Use Safaricom Sandbox environment (testing only)
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2 text-[11px] text-slate-500 pt-1">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Keys are encrypted with AES-256 before storage and never returned in API responses.</span>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end space-x-3">
+              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-end space-x-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsDarajaModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingDaraja}
-                  className="px-5 py-2.5 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md flex items-center space-x-1.5"
+                  className="px-5 py-2 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md flex items-center space-x-1.5"
                 >
                   {isSubmittingDaraja ? (
                     <>

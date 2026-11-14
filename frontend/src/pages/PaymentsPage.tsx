@@ -267,106 +267,108 @@ export const PaymentsPage: React.FC = () => {
 
       {/* MODAL: Request Payment (STK Push) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6 text-slate-900 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 text-slate-900 max-h-[88vh] flex flex-col my-auto animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div>
-                <h3 className="text-xl font-extrabold text-slate-950">Request Payment</h3>
-                <p className="text-xs text-slate-500">M-PESA STK Push via Tuma Payment Gateway</p>
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-950">Request Payment</h3>
+                <p className="text-xs text-slate-500">M-PESA STK Push Prompt</p>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-900 transition"
+                className="p-1.5 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleStkPush} className="space-y-4 text-xs font-sans">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Payment Gateway Rail
-                </label>
-                <select
-                  value={selectedProvider}
-                  onChange={(e) => setSelectedProvider(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900 bg-white"
-                >
-                  <option value="AUTO">Auto (System Default / Active Gateway)</option>
-                  <option value="TUMA_MPESA">Tuma M-PESA Gateway (Direct Bank Settlement)</option>
-                  <option value="DARAJA_PAYBILL">Safaricom Daraja (Paybill Shortcode)</option>
-                  <option value="DARAJA_TILL">Safaricom Daraja (Buy Goods Till)</option>
-                </select>
+            <form onSubmit={handleStkPush} className="flex flex-col flex-1 min-h-0 mt-3 text-xs font-sans">
+              <div className="overflow-y-auto pr-1.5 space-y-3 flex-1 min-h-0">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Payment Gateway Rail
+                  </label>
+                  <select
+                    value={selectedProvider}
+                    onChange={(e) => setSelectedProvider(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm text-slate-900 bg-white"
+                  >
+                    <option value="AUTO">Auto (System Default / Active Gateway)</option>
+                    <option value="TUMA_MPESA">Tuma M-PESA Gateway (Direct Bank Settlement)</option>
+                    <option value="DARAJA_PAYBILL">Safaricom Daraja (Paybill Shortcode)</option>
+                    <option value="DARAJA_TILL">Safaricom Daraja (Buy Goods Till)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Customer Safaricom Number (254...)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="254712345678"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm font-mono text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Amount in KES (KSh)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="1.00"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm font-mono text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Account Reference / Invoice No.
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    placeholder="INV-0045"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm text-slate-900 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Transaction Description
+                  </label>
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Settlement of balance"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-xs sm:text-sm text-slate-900"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Customer Safaricom Number (254...)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="254712345678"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Amount in KES (KSh)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="1500.00"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Account Reference / Invoice No.
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  placeholder="INV-0045"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Transaction Description
-                </label>
-                <input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Settlement of balance"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-3">
+              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-end space-x-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold transition"
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold text-xs transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold transition flex items-center space-x-2"
+                  className="px-5 py-2 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 font-bold text-xs transition flex items-center space-x-1.5"
                 >
                   {isSubmitting ? (
                     <span>Dispatching...</span>
