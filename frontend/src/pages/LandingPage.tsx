@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MarketingNavbar } from '../components/MarketingNavbar';
-import { ArrowRight, CheckCircle2, ArrowUp } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ArrowUp, Sparkles, Activity, ShieldCheck, Zap, Layers, Smartphone, RefreshCw, ChevronRight } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
   const [heroTab, setHeroTab] = useState<'preview' | 'assistant'>('preview');
+  const [activeWordIdx, setActiveWordIdx] = useState(0);
+  const words = ['matched.', 'reconciled.', 'automated.', 'audit-ready.'];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveWordIdx((prev) => (prev + 1) % words.length);
+    }, 2600);
+    return () => clearInterval(timer);
+  }, []);
+
   const [assistantInput, setAssistantInput] = useState('');
   const [assistantMessages, setAssistantMessages] = useState<Array<{ sender: 'user' | 'assistant'; text: string }>>([
     {
@@ -44,117 +54,211 @@ export const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-[#080D18] text-slate-100 font-sans selection:bg-[#16A6D9] selection:text-slate-950">
       <MarketingNavbar />
 
-      {/* Hero Section (Page 1 Top) */}
-      <section className="relative pt-12 pb-24 px-6 overflow-hidden border-b border-slate-900">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Left Column: Headline & CTA */}
+      {/* Hero Section (Cinematic Animated Financial Command Deck) */}
+      <section className="relative pt-16 pb-28 px-6 overflow-hidden border-b border-slate-900 bg-[#060A14]">
+        {/* Cinematic Backdrop Glows & Grid */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Top Radial Flare */}
+          <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-gradient-to-b from-[#16A6D9]/25 via-indigo-600/10 to-transparent blur-[120px] rounded-full animate-pulse-glow" />
+          {/* Background Grid Accent */}
+          <div className="absolute inset-0 bg-[radial-gradient(#16A6D9_1px,transparent_1px)] [background-size:32px_32px] opacity-10" />
+          {/* Ambient Floating Glow Spheres */}
+          <div className="absolute top-1/4 -left-24 w-96 h-96 bg-[#16A6D9]/15 rounded-full blur-[100px] animate-float-slow" />
+          <div className="absolute bottom-10 -right-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] animate-float-reverse" />
+          {/* Anamorphic Laser Horizon Beam */}
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#16A6D9]/60 to-transparent shadow-[0_0_15px_#16A6D9]" />
+        </div>
+
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+          {/* Left Column: Cinematic Headline & CTA */}
           <div className="lg:col-span-7 space-y-8">
-            <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium">
-              Built for Kenyan businesses · M-PESA ready
+            {/* Live Telemetry Pill */}
+            <div className="inline-flex items-center space-x-2.5 px-4 py-1.5 rounded-full bg-[#0B132B]/90 border border-[#16A6D9]/30 text-xs text-slate-300 font-medium backdrop-blur-md shadow-lg shadow-[#16A6D9]/10">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="tracking-wide text-[11px] font-semibold text-slate-200">
+                KENYA'S FIRST DUAL-RAIL AUTOPILOT · TUMA & DARAJA NATIVE
+              </span>
             </div>
 
-            <h1 className="text-6xl sm:text-7xl lg:text-8xl font-extrabold text-white tracking-tight leading-[1.05]">
-              Every<br />
-              shilling,<br />
-              <span className="text-[#16A6D9]">matched.</span>
+            {/* Dynamic Animated Headline */}
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.05]">
+              Every shilling,<br />
+              <span className="inline-block relative">
+                <span className="shimmer-text font-extrabold transition-all duration-300">
+                  {words[activeWordIdx]}
+                </span>
+                <span className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#16A6D9] via-emerald-400 to-transparent rounded-full shadow-[0_0_12px_#16A6D9]"></span>
+              </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-slate-300 max-w-xl leading-relaxed">
-              Collect M-PESA and bank payments, reconcile them to invoices automatically and keep books your accountant will love.
+            <p className="text-lg sm:text-xl text-slate-300 max-w-xl leading-relaxed font-normal">
+              Autonomous financial operations for modern Kenyan businesses. Collect via M-PESA & bank rails, eliminate reconciliation backlog with deterministic 5-tier matching, and keep books your accountant will love.
             </p>
 
+            {/* CTA Buttons */}
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <Link
                 to="/early-access"
-                className="px-7 py-3.5 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 text-base font-bold transition shadow-xl shadow-[#16A6D9]/25"
+                className="group relative px-7 py-4 rounded-xl bg-[#16A6D9] hover:bg-[#1392C0] text-slate-950 text-base font-extrabold transition shadow-xl shadow-[#16A6D9]/30 flex items-center space-x-2 overflow-hidden"
               >
-                Get early access
+                <span className="relative z-10">Get early access</span>
+                <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
               </Link>
               <a
                 href="#how-it-works"
-                className="px-7 py-3.5 rounded-xl bg-transparent hover:bg-slate-900 border border-slate-700 text-white text-base font-medium transition"
+                className="px-7 py-4 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-white text-base font-medium transition backdrop-blur-sm flex items-center space-x-2"
               >
-                See how it works
+                <span>See how it works</span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
               </a>
+            </div>
+
+            {/* Key Trust Telemetry Row */}
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-900/80 text-xs">
+              <div>
+                <div className="text-[#16A6D9] font-black text-lg font-mono">99.98%</div>
+                <div className="text-slate-400 text-[11px] mt-0.5">Auto-Match Accuracy</div>
+              </div>
+              <div>
+                <div className="text-emerald-400 font-black text-lg font-mono">KSh 0.00</div>
+                <div className="text-slate-400 text-[11px] mt-0.5">Custody Risk (Direct Bank)</div>
+              </div>
+              <div>
+                <div className="text-amber-400 font-black text-lg font-mono">&lt; 2.5s</div>
+                <div className="text-slate-400 text-[11px] mt-0.5">STK Handset Latency</div>
+              </div>
             </div>
           </div>
 
-          {/* Right Column: Hero Preview Card (Page 1) or Ask about PayOps (Page 22) */}
+          {/* Right Column: Hero Preview Card / Live Holographic Stream */}
           <div className="lg:col-span-5 space-y-3">
-            {/* Toggle Pills */}
-            <div className="flex items-center space-x-2">
+            {/* Toggle Switcher */}
+            <div className="flex items-center space-x-2 bg-slate-900/60 p-1 rounded-2xl border border-slate-800/80 backdrop-blur-md w-fit">
               <button
                 onClick={() => setHeroTab('preview')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                   heroTab === 'preview'
-                    ? 'bg-[#16A6D9] text-slate-950 shadow-sm'
-                    : 'bg-slate-900 text-slate-400 hover:text-white'
+                    ? 'bg-[#16A6D9] text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Money Trail Preview
+                <Activity className="w-3.5 h-3.5" />
+                <span>Money Stream Telemetry</span>
               </button>
               <button
                 onClick={() => setHeroTab('assistant')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                   heroTab === 'assistant'
-                    ? 'bg-[#16A6D9] text-slate-950 shadow-sm'
-                    : 'bg-slate-900 text-slate-400 hover:text-white'
+                    ? 'bg-[#16A6D9] text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Ask about PayOps
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Ask PayOps AI</span>
               </button>
             </div>
 
             {heroTab === 'preview' ? (
-              <div className="bg-[#0B132B] rounded-3xl border border-slate-800/80 p-8 shadow-2xl relative animate-in fade-in">
-                <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                  <span>Collected today</span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-800/60 text-slate-400 text-[11px]">
-                    Illustrative screen
+              <div className="bg-[#0B132B]/95 rounded-3xl border border-[#16A6D9]/30 p-7 shadow-2xl relative backdrop-blur-xl animate-in fade-in overflow-hidden shadow-[#16A6D9]/10">
+                {/* Top Subtle Scan Line */}
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#16A6D9] to-transparent animate-laser"></div>
+
+                <div className="flex items-center justify-between text-xs text-slate-400 pb-3 border-b border-slate-800/80">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="font-mono text-slate-300 text-[11px] font-semibold tracking-wider">LIVE MONEY TRAIL</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#16A6D9]/10 text-[#16A6D9] text-[10px] font-semibold border border-[#16A6D9]/20 font-mono">
+                    KENYA SHILLINGS (KES)
                   </span>
                 </div>
 
-                <div className="text-4xl sm:text-5xl font-extrabold text-[#16A6D9] tracking-tight mt-1 mb-6 font-sans">
-                  KSh 184,500
+                <div className="mt-4 mb-2">
+                  <span className="text-xs text-slate-400">Total Collected Today</span>
+                  <div className="text-4xl sm:text-5xl font-black text-white tracking-tight mt-1 font-mono flex items-baseline space-x-2">
+                    <span className="text-[#16A6D9]">KSh</span>
+                    <span>184,500</span>
+                    <span className="text-emerald-400 text-xs font-sans font-semibold tracking-normal flex items-center ml-2">
+                      +14.2% today
+                    </span>
+                  </div>
                 </div>
 
-                {/* Graphic Bar Chart Visual */}
-                <div className="flex items-end space-x-2 h-20 mb-8 pt-4">
-                  <div className="w-4 bg-[#16A6D9]/30 rounded-t h-8"></div>
-                  <div className="w-4 bg-[#16A6D9]/40 rounded-t h-12"></div>
-                  <div className="w-4 bg-[#16A6D9]/30 rounded-t h-7"></div>
-                  <div className="w-4 bg-[#16A6D9]/50 rounded-t h-14"></div>
-                  <div className="w-4 bg-[#16A6D9]/70 rounded-t h-16"></div>
-                  <div className="w-4 bg-[#16A6D9]/60 rounded-t h-10"></div>
-                  <div className="w-4 bg-[#16A6D9]/80 rounded-t h-18"></div>
-                  <div className="w-4 bg-[#16A6D9] rounded-t h-20"></div>
-                  <div className="w-4 bg-[#16A6D9] rounded-t h-16"></div>
+                {/* Animated Audio/Financial Telemetry Wave */}
+                <div className="my-6 p-3 rounded-2xl bg-[#080D18]/80 border border-slate-800/80 flex items-center justify-between space-x-1.5 h-16">
+                  {[45, 75, 30, 90, 65, 80, 50, 95, 70, 85, 40, 100, 60, 80, 55].map((h, i) => (
+                    <div
+                      key={i}
+                      className="w-full bg-[#16A6D9] rounded-full transition-all duration-500 opacity-80 hover:opacity-100"
+                      style={{
+                        height: `${h}%`,
+                        animation: `bar-dance 1.8s ease-in-out infinite ${i * 0.12}s`,
+                      }}
+                    />
+                  ))}
                 </div>
 
-                {/* Recent Matched List */}
-                <div className="space-y-3 font-mono text-xs">
-                  <div className="p-3.5 rounded-xl bg-[#080D18] border border-slate-800/60 flex items-center justify-between">
-                    <span className="text-slate-300">SKT4X92LQ1 to INV-0042</span>
-                    <span className="text-[#16A6D9] font-bold font-sans">Matched</span>
+                {/* Live Real-Time Transaction Stream */}
+                <div className="space-y-2.5 font-mono text-xs">
+                  <div className="p-3.5 rounded-2xl bg-[#080D18] border border-[#16A6D9]/30 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-[10px]">
+                        STK
+                      </div>
+                      <div>
+                        <div className="text-slate-200 font-semibold text-xs">SKT4X92LQ1 → INV-0042</div>
+                        <div className="text-[10px] text-slate-500 font-sans">254722***410 · KSh 12,000.00</div>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold font-sans text-[10px]">
+                      Auto-Matched
+                    </span>
                   </div>
-                  <div className="p-3.5 rounded-xl bg-[#080D18] border border-slate-800/60 flex items-center justify-between">
-                    <span className="text-slate-300">SKT2C77PD3</span>
-                    <span className="text-amber-400 font-bold font-sans">Needs review</span>
+
+                  <div className="p-3.5 rounded-2xl bg-[#080D18] border border-slate-800/80 flex items-center justify-between">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-[#16A6D9]/10 text-[#16A6D9] flex items-center justify-center font-bold text-[10px]">
+                        WIRE
+                      </div>
+                      <div>
+                        <div className="text-slate-300 font-semibold text-xs">BNK-20931 → Equity Upper Hill</div>
+                        <div className="text-[10px] text-slate-500 font-sans">Corporate Wire · KSh 48,000.00</div>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-[#16A6D9]/10 border border-[#16A6D9]/30 text-[#16A6D9] font-bold font-sans text-[10px]">
+                      Reconciled
+                    </span>
                   </div>
+                </div>
+
+                {/* Direct Bank Settlement Guarantee Badge */}
+                <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="flex items-center space-x-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Direct Commercial Bank Settlement</span>
+                  </div>
+                  <span className="font-mono text-[#16A6D9]">0 Unreconciled</span>
                 </div>
               </div>
             ) : (
-              /* Ask about PayOps Card (Page 22) */
-              <div className="bg-white text-slate-900 rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-2xl relative animate-in fade-in flex flex-col justify-between min-h-[420px]">
-                <div className="space-y-1 pb-3 border-b border-slate-100">
-                  <h3 className="text-base font-extrabold text-slate-950">Ask about PayOps</h3>
-                  <p className="text-xs text-slate-500">
-                    Answers about features, pricing and early access
+              /* Ask about PayOps Card */
+              <div className="bg-[#0B132B]/95 rounded-3xl border border-slate-800 p-6 sm:p-7 shadow-2xl relative animate-in fade-in flex flex-col justify-between min-h-[440px] backdrop-blur-xl">
+                <div className="space-y-1 pb-3 border-b border-slate-800">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-[#16A6D9]" />
+                    <h3 className="text-base font-extrabold text-white">Ask about PayOps</h3>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Instant answers about reconciliation, eTIMS, Tuma & pricing
                   </p>
                 </div>
 
-                {/* Conversation Body (Page 22) */}
-                <div className="space-y-3 my-4 text-xs">
+                {/* Conversation Body */}
+                <div className="space-y-3 my-4 text-xs overflow-y-auto max-h-56 pr-1">
                   {assistantMessages.map((msg, i) => (
                     <div
                       key={i}
@@ -163,8 +267,8 @@ export const LandingPage: React.FC = () => {
                       <div
                         className={`px-4 py-2.5 rounded-2xl max-w-[85%] leading-relaxed ${
                           msg.sender === 'user'
-                            ? 'bg-[#080D18] text-white font-medium'
-                            : 'bg-slate-100 text-slate-800'
+                            ? 'bg-[#16A6D9] text-slate-950 font-bold'
+                            : 'bg-slate-900 border border-slate-800 text-slate-200'
                         }`}
                       >
                         {msg.text}
@@ -173,42 +277,42 @@ export const LandingPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Suggestion Pills (Page 22) */}
+                {/* Suggestion Pills */}
                 <div className="flex flex-wrap gap-1.5 pt-2">
                   <button
                     onClick={() => handleAssistantSend('How does reconciliation work?')}
-                    className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium transition"
+                    className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 text-[11px] font-medium transition"
                   >
                     How does reconciliation work?
                   </button>
                   <button
                     onClick={() => handleAssistantSend('Pricing')}
-                    className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium transition"
+                    className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 text-[11px] font-medium transition"
                   >
                     Pricing
                   </button>
                   <Link
                     to="/early-access"
-                    className="px-2.5 py-1 rounded-full bg-[#16A6D9]/15 text-[#0284C7] hover:bg-[#16A6D9]/25 text-[11px] font-semibold transition"
+                    className="px-2.5 py-1 rounded-full bg-[#16A6D9]/15 text-[#16A6D9] border border-[#16A6D9]/30 hover:bg-[#16A6D9]/25 text-[11px] font-semibold transition"
                   >
                     Join early access
                   </Link>
                 </div>
 
-                {/* Input Form (Page 22) */}
+                {/* Input Form */}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     handleAssistantSend();
                   }}
-                  className="relative flex items-center mt-3 pt-2 border-t border-slate-100"
+                  className="relative flex items-center mt-3 pt-2 border-t border-slate-800"
                 >
                   <input
                     type="text"
                     value={assistantInput}
                     onChange={(e) => setAssistantInput(e.target.value)}
-                    placeholder="Type your question"
-                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#16A6D9] focus:bg-white transition"
+                    placeholder="Type your question..."
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#16A6D9] transition"
                   />
                   <button
                     type="submit"
