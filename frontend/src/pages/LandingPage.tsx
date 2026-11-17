@@ -79,7 +79,7 @@ export const LandingPage: React.FC = () => {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
               <span className="tracking-wide text-[11px] font-semibold text-slate-200">
-                KENYA'S FIRST DUAL-RAIL AUTOPILOT · TUMA & DARAJA NATIVE
+                AUTOMATION FOR KENYAN BUSINESSES · 
               </span>
             </div>
 
