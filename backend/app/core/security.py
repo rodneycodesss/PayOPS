@@ -1,6 +1,8 @@
 import base64
 import hashlib
+import hmac
 import os
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
@@ -194,3 +196,28 @@ def verify_totp(secret: str, code: str) -> bool:
         return False
     totp = pyotp.TOTP(secret)
     return totp.verify(code.strip(), valid_window=1)
+
+
+# --- 6-Digit One-Time Password (OTP) Auth & 2FA ---
+
+def generate_otp_code(digits: int = 6) -> str:
+    """Generates a cryptographically secure numeric OTP code."""
+    low = 10 ** (digits - 1)
+    high = 10 ** digits
+    return str(secrets.randbelow(high - low) + low)
+
+
+def hash_otp_code(identifier: str, code: str) -> str:
+    """Hashes an OTP code with HMAC-SHA256 salted by the application SECRET_KEY."""
+    salt = settings.SECRET_KEY.encode("utf-8")
+    msg = f"{identifier.strip().lower()}:{code.strip()}".encode("utf-8")
+    return hmac.new(salt, msg, hashlib.sha256).hexdigest()
+
+
+def verify_otp_code(identifier: str, code: str, expected_hash: str) -> bool:
+    """Verifies an OTP code using constant-time comparison against expected HMAC-SHA256 hash."""
+    if not identifier or not code or not expected_hash:
+        return False
+    actual_hash = hash_otp_code(identifier, code)
+    return hmac.compare_digest(actual_hash, expected_hash)
+

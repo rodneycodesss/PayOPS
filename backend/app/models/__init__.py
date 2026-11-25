@@ -3,7 +3,7 @@ from app.models.tenants import Tenant
 from app.models.branches import Branch
 from app.models.users import User
 from app.models.rbac import Role, Permission, RolePermission, UserRole
-from app.models.auth import RefreshToken
+from app.models.auth import RefreshToken, AuthOtp
 from app.models.audit import AuditLog
 from app.models.idempotency import IdempotencyRecord
 from app.models.webhook import WebhookEvent
@@ -41,6 +41,7 @@ __all__ = [
     "RolePermission",
     "UserRole",
     "RefreshToken",
+    "AuthOtp",
     "AuditLog",
     "IdempotencyRecord",
     "WebhookEvent",

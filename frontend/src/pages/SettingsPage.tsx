@@ -127,12 +127,13 @@ interface AuditEvent {
 }
 
 export const SettingsPage: React.FC = () => {
-  const { user, tenant, refreshUser } = useAuth();
+  const { user, tenant, refreshUser, enable2FA, disable2FA } = useAuth();
   const [registeredName, setRegisteredName] = useState(tenant?.name || 'Rodstar Tech Devs Ltd');
   const [tradingName, setTradingName] = useState(tenant?.trading_name || 'Rodstar PayOps');
   const [kraPin, setKraPin] = useState(tenant?.kra_pin || 'P051982736Z');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isToggling2FA, setIsToggling2FA] = useState(false);
 
   // Tuma Onboarding State
   const [onboarding, setOnboarding] = useState<OnboardingStatus | null>(null);
@@ -327,6 +328,23 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleToggle2FA = async () => {
+    setIsToggling2FA(true);
+    try {
+      if (user?.mfa_enabled) {
+        await disable2FA();
+        showToast('Two-Factor Authentication disabled.');
+      } else {
+        await enable2FA();
+        showToast('Two-Factor Authentication enabled.');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update 2FA setting.');
+    } finally {
+      setIsToggling2FA(false);
+    }
+  };
+
   const handleConnectSettlement = async (e: React.FormEvent) => {
     e.preventDefault();
     setWizardError(null);
@@ -455,61 +473,118 @@ export const SettingsPage: React.FC = () => {
       {activeTab === 'settings' ? (
         /* Two Column Grid */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Card: Business profile (6 cols) */}
-          <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm space-y-6">
-            <h2 className="text-xl font-bold text-slate-950">
-              Business profile
-            </h2>
+          {/* Left Column: Business profile & Security (6 cols) */}
+          <div className="lg:col-span-6 space-y-8">
+            {/* Business profile card */}
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm space-y-6">
+              <h2 className="text-xl font-bold text-slate-950">
+                Business profile
+              </h2>
 
-            <form onSubmit={handleSaveProfile} className="space-y-5 text-xs font-sans">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1.5">
-                  Registered company name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={registeredName}
-                  onChange={(e) => setRegisteredName(e.target.value)}
-                  placeholder="Acme Kenya Ltd"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
-                />
+              <form onSubmit={handleSaveProfile} className="space-y-5 text-xs font-sans">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1.5">
+                    Registered company name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={registeredName}
+                    onChange={(e) => setRegisteredName(e.target.value)}
+                    placeholder="Acme Kenya Ltd"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1.5">
+                    Trading name
+                  </label>
+                  <input
+                    type="text"
+                    value={tradingName}
+                    onChange={(e) => setTradingName(e.target.value)}
+                    placeholder="Acme"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1.5">
+                    KRA PIN
+                  </label>
+                  <input
+                    type="text"
+                    value={kraPin}
+                    onChange={(e) => setKraPin(e.target.value.toUpperCase())}
+                    placeholder="P051234567A"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900 uppercase"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-8 py-3.5 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md"
+                >
+                  {isSaving ? 'Saving...' : 'Save changes'}
+                </button>
+              </form>
+            </div>
+
+            {/* Account Security & Two-Factor Authentication Card */}
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-sm space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#16A6D9]/10 text-[#16A6D9] flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-950">
+                      Two-Factor Authentication (2FA)
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Enforce 6-digit OTP code verification during login
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    user?.mfa_enabled
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {user?.mfa_enabled ? 'Active' : 'Disabled'}
+                </span>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1.5">
-                  Trading name
-                </label>
-                <input
-                  type="text"
-                  value={tradingName}
-                  onChange={(e) => setTradingName(e.target.value)}
-                  placeholder="Acme"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1.5">
-                  KRA PIN
-                </label>
-                <input
-                  type="text"
-                  value={kraPin}
-                  onChange={(e) => setKraPin(e.target.value.toUpperCase())}
-                  placeholder="P051234567A"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-[#16A6D9] text-sm font-mono text-slate-900 uppercase"
-                />
-              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {user?.mfa_enabled
+                  ? 'Your account is securely protected. When signing in with your email and password, a 6-digit OTP code will be sent to your email or generated via your authenticator app.'
+                  : 'Add an extra layer of protection to your financial organization. When enabled, signing in requires both your password and a 6-digit security code.'}
+              </p>
 
               <button
-                type="submit"
-                disabled={isSaving}
-                className="px-8 py-3.5 rounded-xl bg-[#080D18] hover:bg-slate-900 text-white font-bold text-xs transition shadow-md"
+                type="button"
+                disabled={isToggling2FA}
+                onClick={handleToggle2FA}
+                className={`px-6 py-3 rounded-xl font-bold text-xs transition shadow-sm flex items-center space-x-2 ${
+                  user?.mfa_enabled
+                    ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                    : 'bg-[#080D18] hover:bg-slate-900 text-white'
+                }`}
               >
-                {isSaving ? 'Saving...' : 'Save changes'}
+                <Key className="w-4 h-4" />
+                <span>
+                  {isToggling2FA
+                    ? 'Updating Security Setting...'
+                    : user?.mfa_enabled
+                    ? 'Disable Two-Factor Auth'
+                    : 'Enable Two-Factor Authentication'}
+                </span>
               </button>
-            </form>
+            </div>
           </div>
 
           {/* Right Card: Connections & Tuma Automated Gateway (6 cols) */}

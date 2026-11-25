@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+import json
+import logging
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 from fastapi import HTTPException, Request, status
 from sqlalchemy import select, update
@@ -16,16 +18,31 @@ from app.core.security import (
     generate_totp_secret,
     get_totp_uri,
     verify_totp,
+    generate_otp_code,
+    hash_otp_code,
+    verify_otp_code,
 )
 from app.models.tenants import Tenant
 from app.models.branches import Branch
 from app.models.users import User
 from app.models.rbac import Role, Permission, UserRole, RolePermission
-from app.models.auth import RefreshToken
+from app.models.auth import RefreshToken, AuthOtp
 from app.models.accounting import ChartOfAccounts
 from app.models.tax import TaxConfiguration
 from app.services.audit_service import AuditService
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
+
+
+def ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Ensures datetime is timezone-aware in UTC (essential for SQLite compatibility)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
 
 
 # System Roles & Permissions Definition
@@ -316,16 +333,267 @@ class AuthService:
         return tenant, user, access_token, refresh_token
 
     @staticmethod
+    async def request_registration_otp(
+        db: AsyncSession,
+        business_name: str,
+        trading_name: Optional[str],
+        kra_pin: Optional[str],
+        full_name: str,
+        email: str,
+        password: str,
+        phone: Optional[str],
+        request: Optional[Request] = None
+    ) -> Tuple[str, str, int, Optional[str]]:
+        """
+        Validates prospective tenant details, generates a 6-digit verification code,
+        and stores pending registration payload securely until OTP verification.
+        Returns: (message, email, expires_in, dev_otp)
+        """
+        norm_email = email.lower().strip()
+        stmt = select(User).where(User.email == norm_email)
+        existing_user = (await db.execute(stmt)).scalar_one_or_none()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email address is already registered",
+            )
+
+        # Invalidate any prior active registration OTPs for this email
+        st_old = select(AuthOtp).where(
+            AuthOtp.identifier == norm_email,
+            AuthOtp.purpose == "REGISTRATION",
+            AuthOtp.is_used == False,
+        )
+        old_otps = (await db.execute(st_old)).scalars().all()
+        for old in old_otps:
+            old.is_used = True
+
+        raw_code = generate_otp_code(6)
+        code_hash = hash_otp_code(norm_email, raw_code)
+
+        payload_data = {
+            "business_name": business_name.strip(),
+            "trading_name": trading_name.strip() if trading_name else None,
+            "kra_pin": kra_pin.strip().upper() if kra_pin else None,
+            "full_name": full_name.strip(),
+            "email": norm_email,
+            "hashed_password": hash_password(password),
+            "phone": phone.strip() if phone else None,
+        }
+
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        otp_record = AuthOtp(
+            identifier=norm_email,
+            purpose="REGISTRATION",
+            code_hash=code_hash,
+            payload_json=json.dumps(payload_data),
+            expires_at=expires_at,
+            attempts=0,
+            max_attempts=5,
+            is_used=False
+        )
+        db.add(otp_record)
+        await db.commit()
+
+        logger.info(f"[REGISTRATION OTP] Code for {norm_email}: {raw_code}")
+
+        dev_otp = raw_code if settings.APP_ENV != "production" else None
+        return f"Verification code sent to {norm_email}", norm_email, 600, dev_otp
+
+    @staticmethod
+    async def resend_registration_otp(
+        db: AsyncSession,
+        email: str,
+        request: Optional[Request] = None
+    ) -> Tuple[str, str, int, Optional[str]]:
+        """
+        Resends a fresh 6-digit registration OTP code for a pending registration.
+        """
+        norm_email = email.lower().strip()
+        stmt = (
+            select(AuthOtp)
+            .where(
+                AuthOtp.identifier == norm_email,
+                AuthOtp.purpose == "REGISTRATION",
+                AuthOtp.is_used == False,
+            )
+            .order_by(AuthOtp.created_at.desc())
+        )
+        otp = (await db.execute(stmt)).scalars().first()
+        if not otp or not otp.payload_json:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No pending registration found for this email. Please submit registration form.",
+            )
+
+        raw_code = generate_otp_code(6)
+        otp.code_hash = hash_otp_code(norm_email, raw_code)
+        otp.expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        otp.attempts = 0
+        await db.commit()
+
+        logger.info(f"[REGISTRATION OTP RESEND] New code for {norm_email}: {raw_code}")
+
+        dev_otp = raw_code if settings.APP_ENV != "production" else None
+        return f"New verification code sent to {norm_email}", norm_email, 600, dev_otp
+
+    @staticmethod
+    async def verify_registration_otp(
+        db: AsyncSession,
+        email: str,
+        code: str,
+        request: Optional[Request] = None
+    ) -> Tuple[Tenant, User, str, str]:
+        """
+        Validates the 6-digit OTP code, creates tenant, user, branch, seeds defaults,
+        and issues access & refresh tokens.
+        """
+        norm_email = email.lower().strip()
+        stmt = (
+            select(AuthOtp)
+            .where(
+                AuthOtp.identifier == norm_email,
+                AuthOtp.purpose == "REGISTRATION",
+                AuthOtp.is_used == False,
+            )
+            .order_by(AuthOtp.created_at.desc())
+        )
+        otp = (await db.execute(stmt)).scalars().first()
+        if not otp or not otp.payload_json:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No active verification code found for this email. Please request a new code.",
+            )
+
+        if datetime.now(timezone.utc) > ensure_utc(otp.expires_at):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has expired. Please request a new code.",
+            )
+
+        if otp.attempts >= otp.max_attempts:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum verification attempts exceeded. Please request a new code.",
+            )
+
+        if not verify_otp_code(norm_email, code, otp.code_hash):
+            otp.attempts += 1
+            await db.commit()
+            remaining = otp.max_attempts - otp.attempts
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid verification code. {remaining} attempt(s) remaining.",
+            )
+
+        # Mark OTP as successfully used
+        otp.is_used = True
+        payload = json.loads(otp.payload_json)
+
+        # Verify email is not registered in the interim
+        stmt_dup = select(User).where(User.email == payload["email"])
+        if (await db.execute(stmt_dup)).scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email address is already registered",
+            )
+
+        await AuthService.ensure_system_rbac_seeded(db)
+
+        # 1. Create Tenant
+        tenant = Tenant(
+            name=payload["business_name"],
+            trading_name=payload.get("trading_name"),
+            kra_pin=payload.get("kra_pin"),
+            email=payload["email"],
+            phone=payload.get("phone"),
+            currency="KES",
+            is_active=True
+        )
+        db.add(tenant)
+        await db.flush()
+
+        # 2. Create Headquarters Branch
+        hq_branch = Branch(
+            tenant_id=tenant.id,
+            name="Headquarters",
+            code="HQ",
+            is_headquarters=True,
+            is_active=True
+        )
+        db.add(hq_branch)
+
+        # 3. Create User with is_verified=True
+        user = User(
+            tenant_id=tenant.id,
+            email=payload["email"],
+            full_name=payload["full_name"],
+            hashed_password=payload["hashed_password"],
+            is_active=True,
+            is_verified=True,
+            mfa_enabled=False
+        )
+        db.add(user)
+        await db.flush()
+
+        # 4. Assign Owner Role
+        role_stmt = select(Role).where(Role.name == "owner", Role.tenant_id == None)
+        owner_role = (await db.execute(role_stmt)).scalar_one()
+
+        user_role = UserRole(
+            user_id=user.id,
+            role_id=owner_role.id,
+            tenant_id=tenant.id
+        )
+        db.add(user_role)
+
+        # 5. Seed Chart of Accounts & Tax Config
+        await AuthService.seed_tenant_defaults(db, tenant.id)
+
+        # 6. Issue Tokens
+        roles = ["owner"]
+        permissions = DEFAULT_ROLES["owner"]
+        access_token = create_access_token(user.id, tenant.id, roles, permissions)
+        refresh_token, jti, family_id, expires_at = create_refresh_token(user.id, tenant.id)
+
+        token_record = RefreshToken(
+            tenant_id=tenant.id,
+            user_id=user.id,
+            token_hash=hash_token(refresh_token),
+            jti=jti,
+            family_id=family_id,
+            is_revoked=False,
+            expires_at=expires_at
+        )
+        db.add(token_record)
+
+        # 7. Audit Log
+        await AuditService.log_event(
+            db=db,
+            action="AUTH_REGISTER_OTP_VERIFIED",
+            resource_type="tenant",
+            resource_id=tenant.id,
+            tenant_id=tenant.id,
+            actor_id=user.id,
+            actor_email=user.email,
+            details={"business_name": tenant.name, "branch": "HQ", "auth_method": "EMAIL_OTP"},
+            request=request
+        )
+
+        await db.commit()
+        return tenant, user, access_token, refresh_token
+
+    @staticmethod
     async def authenticate_user(
         db: AsyncSession,
         email: str,
         password: str,
         totp_code: Optional[str] = None,
         request: Optional[Request] = None
-    ) -> Tuple[Optional[User], Optional[str], Optional[str], bool, Optional[str]]:
+    ) -> Tuple[Optional[User], Optional[str], Optional[str], bool, Optional[str], Optional[str]]:
         """
-        Authenticates user via Argon2id and optional TOTP.
-        Returns: (user, access_token, refresh_token, mfa_required, temp_token)
+        Authenticates user via Argon2id and optional TOTP / email OTP.
+        Returns: (user, access_token, refresh_token, mfa_required, temp_token, dev_otp)
         """
         stmt = (
             select(User)
@@ -368,10 +636,65 @@ class AuthService:
                 temp_token = create_access_token(
                     user.id, user.tenant_id, ["mfa_pending"], []
                 )
-                return user, None, None, True, temp_token
-            
-            # Verify TOTP code
-            if not verify_totp(user.mfa_secret or "", totp_code):
+
+                # Invalidate any older login OTPs for this user
+                st_old = select(AuthOtp).where(
+                    AuthOtp.identifier == user.email.lower().strip(),
+                    AuthOtp.purpose == "LOGIN_2FA",
+                    AuthOtp.is_used == False,
+                )
+                old_otps = (await db.execute(st_old)).scalars().all()
+                for old in old_otps:
+                    old.is_used = True
+
+                raw_code = generate_otp_code(6)
+                code_hash = hash_otp_code(user.email, raw_code)
+
+                otp_record = AuthOtp(
+                    identifier=user.email.lower().strip(),
+                    purpose="LOGIN_2FA",
+                    code_hash=code_hash,
+                    user_id=user.id,
+                    tenant_id=user.tenant_id,
+                    expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+                    attempts=0,
+                    max_attempts=5,
+                    is_used=False
+                )
+                db.add(otp_record)
+                await db.commit()
+
+                logger.info(f"[2FA LOGIN OTP] Code for {user.email}: {raw_code}")
+
+                dev_otp = raw_code if settings.APP_ENV != "production" else None
+                return user, None, None, True, temp_token, dev_otp
+
+            # Verify code: check TOTP secret (authenticator app) OR active LOGIN_2FA OTP
+            is_valid = False
+            if user.mfa_secret and verify_totp(user.mfa_secret, totp_code):
+                is_valid = True
+            else:
+                # Check active LOGIN_2FA OTP in auth_otps
+                st_otp = (
+                    select(AuthOtp)
+                    .where(
+                        AuthOtp.identifier == user.email.lower().strip(),
+                        AuthOtp.purpose == "LOGIN_2FA",
+                        AuthOtp.is_used == False,
+                    )
+                    .order_by(AuthOtp.created_at.desc())
+                )
+                active_otp = (await db.execute(st_otp)).scalars().first()
+                if active_otp:
+                    if datetime.now(timezone.utc) <= ensure_utc(active_otp.expires_at) and active_otp.attempts < active_otp.max_attempts:
+                        if verify_otp_code(user.email, totp_code, active_otp.code_hash):
+                            active_otp.is_used = True
+                            is_valid = True
+                        else:
+                            active_otp.attempts += 1
+                            await db.commit()
+
+            if not is_valid:
                 await AuditService.log_event(
                     db=db,
                     action="AUTH_MFA_FAILED",
@@ -379,7 +702,7 @@ class AuthService:
                     tenant_id=user.tenant_id,
                     actor_id=user.id,
                     actor_email=user.email,
-                    details={"reason": "Invalid TOTP code"},
+                    details={"reason": "Invalid TOTP or email OTP code"},
                     request=request
                 )
                 await db.commit()
@@ -425,7 +748,179 @@ class AuthService:
         )
 
         await db.commit()
-        return user, access_token, refresh_token, False, None
+        return user, access_token, refresh_token, False, None, None
+
+    @staticmethod
+    async def verify_login_2fa(
+        db: AsyncSession,
+        temp_token: str,
+        code: str,
+        request: Optional[Request] = None
+    ) -> Tuple[User, str, str]:
+        """
+        Validates a 2FA code (TOTP or email OTP) using the pending temp_token,
+        and issues access and refresh tokens.
+        """
+        try:
+            payload = decode_token(temp_token)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid or expired 2FA session: {str(e)}",
+            )
+
+        user_id = payload.get("sub")
+        stmt = (
+            select(User)
+            .where(User.id == user_id)
+            .options(
+                selectinload(User.user_roles)
+                .selectinload(UserRole.role)
+                .selectinload(Role.role_permissions)
+                .selectinload(RolePermission.permission)
+            )
+        )
+        user = (await db.execute(stmt)).scalar_one_or_none()
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or account deactivated",
+            )
+
+        is_valid = False
+        if user.mfa_secret and verify_totp(user.mfa_secret, code):
+            is_valid = True
+        else:
+            st_otp = (
+                select(AuthOtp)
+                .where(
+                    AuthOtp.identifier == user.email.lower().strip(),
+                    AuthOtp.purpose == "LOGIN_2FA",
+                    AuthOtp.is_used == False,
+                )
+                .order_by(AuthOtp.created_at.desc())
+            )
+            active_otp = (await db.execute(st_otp)).scalars().first()
+            if active_otp:
+                if datetime.now(timezone.utc) <= ensure_utc(active_otp.expires_at) and active_otp.attempts < active_otp.max_attempts:
+                    if verify_otp_code(user.email, code, active_otp.code_hash):
+                        active_otp.is_used = True
+                        is_valid = True
+                    else:
+                        active_otp.attempts += 1
+                        await db.commit()
+
+        if not is_valid:
+            await AuditService.log_event(
+                db=db,
+                action="AUTH_MFA_FAILED",
+                resource_type="auth",
+                tenant_id=user.tenant_id,
+                actor_id=user.id,
+                actor_email=user.email,
+                details={"reason": "Invalid 2FA code"},
+                request=request
+            )
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid two-factor authentication code",
+            )
+
+        roles = []
+        permissions = set()
+        for ur in user.user_roles:
+            roles.append(ur.role.name)
+            for rp in ur.role.role_permissions:
+                permissions.add(rp.permission.code)
+
+        access_token = create_access_token(user.id, user.tenant_id, roles, list(permissions))
+        refresh_token, jti, family_id, expires_at = create_refresh_token(user.id, user.tenant_id)
+
+        token_record = RefreshToken(
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            token_hash=hash_token(refresh_token),
+            jti=jti,
+            family_id=family_id,
+            is_revoked=False,
+            expires_at=expires_at
+        )
+        db.add(token_record)
+        user.last_login_at = datetime.now(timezone.utc)
+
+        await AuditService.log_event(
+            db=db,
+            action="AUTH_LOGIN_SUCCESS",
+            resource_type="auth",
+            tenant_id=user.tenant_id,
+            actor_id=user.id,
+            actor_email=user.email,
+            details={"auth_method": "2FA_VERIFIED"},
+            request=request
+        )
+
+        await db.commit()
+        return user, access_token, refresh_token
+
+    @staticmethod
+    async def resend_login_2fa(
+        db: AsyncSession,
+        temp_token: str,
+        request: Optional[Request] = None
+    ) -> Tuple[str, Optional[str]]:
+        """
+        Generates and dispatches a fresh 2FA login OTP for a pending 2FA login session.
+        """
+        try:
+            payload = decode_token(temp_token)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid or expired 2FA session: {str(e)}",
+            )
+
+        user_id = payload.get("sub")
+        stmt = select(User).where(User.id == user_id)
+        user = (await db.execute(stmt)).scalar_one_or_none()
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or account deactivated",
+            )
+
+        # Invalidate old login OTPs
+        st_old = select(AuthOtp).where(
+            AuthOtp.identifier == user.email.lower().strip(),
+            AuthOtp.purpose == "LOGIN_2FA",
+            AuthOtp.is_used == False,
+        )
+        old_otps = (await db.execute(st_old)).scalars().all()
+        for old in old_otps:
+            old.is_used = True
+
+        raw_code = generate_otp_code(6)
+        code_hash = hash_otp_code(user.email, raw_code)
+
+        otp_record = AuthOtp(
+            identifier=user.email.lower().strip(),
+            purpose="LOGIN_2FA",
+            code_hash=code_hash,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+            attempts=0,
+            max_attempts=5,
+            is_used=False
+        )
+        db.add(otp_record)
+        await db.commit()
+
+        logger.info(f"[2FA LOGIN OTP RESEND] New code for {user.email}: {raw_code}")
+
+        dev_otp = raw_code if settings.APP_ENV != "production" else None
+        return f"New verification code sent to {user.email}", dev_otp
+
 
     @staticmethod
     async def rotate_refresh_token(

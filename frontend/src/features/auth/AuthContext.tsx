@@ -27,7 +27,14 @@ interface AuthContextType {
   isLoading: boolean;
   isTestAccount: boolean;
   login: (email: string, password: string, totpCode?: string) => Promise<any>;
+  verifyLogin2fa: (tempToken: string, code: string) => Promise<any>;
+  resendLogin2fa: (tempToken: string) => Promise<any>;
   register: (payload: any) => Promise<any>;
+  requestRegisterOtp: (payload: any) => Promise<any>;
+  resendRegisterOtp: (email: string) => Promise<any>;
+  verifyRegisterOtp: (email: string, code: string) => Promise<any>;
+  enable2FA: () => Promise<any>;
+  disable2FA: () => Promise<any>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -86,6 +93,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refresh_token?: string;
       mfa_required: boolean;
       temp_token?: string;
+      delivery_channel?: string;
+      dev_otp?: string;
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password, totp_code: totpCode }),
@@ -103,6 +112,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data;
   };
 
+  const verifyLogin2fa = async (tempToken: string, code: string) => {
+    const data = await apiRequest<{
+      access_token: string;
+      refresh_token: string;
+    }>('/auth/login/verify-2fa', {
+      method: 'POST',
+      body: JSON.stringify({ temp_token: tempToken, code }),
+    });
+
+    if (data.access_token && data.refresh_token) {
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      await fetchProfile();
+    }
+    return data;
+  };
+
+  const resendLogin2fa = async (tempToken: string) => {
+    return await apiRequest<{ message: string; dev_otp?: string }>('/auth/login/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ temp_token: tempToken }),
+    });
+  };
+
   const register = async (payload: any) => {
     const data = await apiRequest<{
       access_token: string;
@@ -116,6 +149,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('refresh_token', data.refresh_token);
     await fetchProfile();
     return data;
+  };
+
+  const requestRegisterOtp = async (payload: any) => {
+    return await apiRequest<{
+      message: string;
+      email: string;
+      expires_in: number;
+      dev_otp?: string;
+    }>('/auth/register/request-otp', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  };
+
+  const resendRegisterOtp = async (email: string) => {
+    return await apiRequest<{
+      message: string;
+      email: string;
+      expires_in: number;
+      dev_otp?: string;
+    }>('/auth/register/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  };
+
+  const verifyRegisterOtp = async (email: string, code: string) => {
+    const data = await apiRequest<{
+      access_token: string;
+      refresh_token: string;
+    }>('/auth/register/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    });
+
+    if (data.access_token && data.refresh_token) {
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      await fetchProfile();
+    }
+    return data;
+  };
+
+  const enable2FA = async () => {
+    const res = await apiRequest<{ message: string }>('/auth/mfa/enable-email', {
+      method: 'POST',
+    });
+    await fetchProfile();
+    return res;
+  };
+
+  const disable2FA = async () => {
+    const res = await apiRequest<{ message: string }>('/auth/mfa/disable', {
+      method: 'POST',
+    });
+    await fetchProfile();
+    return res;
   };
 
   const logout = () => {
@@ -144,7 +234,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isTestAccount,
         login,
+        verifyLogin2fa,
+        resendLogin2fa,
         register,
+        requestRegisterOtp,
+        resendRegisterOtp,
+        verifyRegisterOtp,
+        enable2FA,
+        disable2FA,
         logout,
         refreshUser: fetchProfile,
       }}

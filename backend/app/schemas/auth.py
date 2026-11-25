@@ -29,6 +29,34 @@ class TokenResponse(BaseModel):
     expires_in: int = 1800  # seconds
     mfa_required: bool = False
     temp_token: Optional[str] = None  # Returned when MFA verification is pending
+    delivery_channel: Optional[str] = None  # "email", "sms", "authenticator"
+    dev_otp: Optional[str] = None  # Provided in dev/test environment for easy verification
+
+
+class RegisterOtpResponse(BaseModel):
+    message: str
+    email: str
+    expires_in: int = 600
+    dev_otp: Optional[str] = None
+
+
+class VerifyRegisterOtpRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+
+
+class ResendOtpRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyLogin2faRequest(BaseModel):
+    temp_token: str
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP or email OTP code")
+
+
+class ResendLogin2faRequest(BaseModel):
+    temp_token: str
+
 
 
 class RefreshRequest(BaseModel):

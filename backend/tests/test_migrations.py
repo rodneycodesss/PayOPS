@@ -43,7 +43,7 @@ def test_alembic_migrations_empty_database_and_downgrade(tmp_path):
         "ledger_entries", "tax_configurations", "tax_submissions", "notifications",
         "automation_jobs", "api_keys", "tuma_child_accounts", "tenant_settlement_details",
         "tuma_provisioning_jobs", "tuma_payment_requests", "tuma_webhook_events",
-        "collections", "integration_events"
+        "collections", "integration_events", "auth_otps"
     ]
     for table in required_tables:
         assert table in tables, f"Expected table '{table}' missing after migration upgrade"
