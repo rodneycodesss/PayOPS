@@ -28,7 +28,7 @@ def upgrade() -> None:
         sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('attempts', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('max_attempts', sa.Integer(), nullable=False, server_default='5'),
-        sa.Column('is_used', sa.Boolean(), nullable=False, server_default=sa.text('0')),
+        sa.Column('is_used', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
