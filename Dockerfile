@@ -22,6 +22,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all application source
 COPY . .
 
-EXPOSE 8000
+EXPOSE 3000 8000
 
 CMD ["sh", "start.sh"]
