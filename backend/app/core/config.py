@@ -1,6 +1,6 @@
 import os
 from typing import List, Optional
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,13 +36,53 @@ class Settings(BaseSettings):
 
     # Databases
     DATABASE_URL: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/rodstar_payops",
+        default="postgresql+asyncpg://u87dc5e24:dbt_tvM5ipIP5Q7lk340j5uiCCDMh2VKJ-pU@db-payops.db.hcode.site:15432/db_payops?ssl=require",
         description="Async database connection string"
     )
     DATABASE_URL_SYNC: str = Field(
-        default="postgresql+psycopg2://postgres:postgres@localhost:5432/rodstar_payops",
+        default="postgresql+psycopg2://u87dc5e24:dbt_tvM5ipIP5Q7lk340j5uiCCDMh2VKJ-pU@db-payops.db.hcode.site:15432/db_payops?sslmode=require",
         description="Sync database connection string (for Alembic & Celery)"
     )
+
+    @model_validator(mode="after")
+    def resolve_database_urls(self) -> "Settings":
+        env_db = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
+        env_sync = os.getenv("DATABASE_URL_SYNC")
+
+        raw_db_url = env_db or self.DATABASE_URL
+        # If platform provides DATABASE_URL in environment without DATABASE_URL_SYNC, derive sync from it
+        if env_db and not env_sync:
+            raw_sync_url = env_db
+        else:
+            raw_sync_url = env_sync or self.DATABASE_URL_SYNC
+
+        # If sync URL points to localhost but main URL points to a remote host, sync from main URL
+        if "localhost" in raw_sync_url and "localhost" not in raw_db_url:
+            raw_sync_url = raw_db_url
+
+        # Normalize async database URL (must use asyncpg for PostgreSQL)
+        if raw_db_url.startswith("postgres://"):
+            raw_db_url = "postgresql+asyncpg://" + raw_db_url[len("postgres://"):]
+        elif raw_db_url.startswith("postgresql://") and not raw_db_url.startswith("postgresql+"):
+            raw_db_url = "postgresql+asyncpg://" + raw_db_url[len("postgresql://"):]
+
+        if "asyncpg" in raw_db_url and "sslmode=" in raw_db_url:
+            raw_db_url = raw_db_url.replace("sslmode=require", "ssl=require").replace("sslmode=prefer", "ssl=prefer")
+
+        # Normalize sync database URL (must use psycopg2 for PostgreSQL)
+        if raw_sync_url.startswith("postgres://"):
+            raw_sync_url = "postgresql+psycopg2://" + raw_sync_url[len("postgres://"):]
+        elif raw_sync_url.startswith("postgresql://") and not raw_sync_url.startswith("postgresql+"):
+            raw_sync_url = "postgresql+psycopg2://" + raw_sync_url[len("postgresql://"):]
+        elif "postgresql+asyncpg://" in raw_sync_url:
+            raw_sync_url = raw_sync_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+
+        if "psycopg2" in raw_sync_url and "ssl=require" in raw_sync_url:
+            raw_sync_url = raw_sync_url.replace("ssl=require", "sslmode=require")
+
+        self.DATABASE_URL = raw_db_url
+        self.DATABASE_URL_SYNC = raw_sync_url
+        return self
 
     # Redis & Celery
     REDIS_URL: str = "redis://localhost:6379/0"
