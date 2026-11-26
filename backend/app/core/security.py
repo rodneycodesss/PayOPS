@@ -221,3 +221,26 @@ def verify_otp_code(identifier: str, code: str, expected_hash: str) -> bool:
     actual_hash = hash_otp_code(identifier, code)
     return hmac.compare_digest(actual_hash, expected_hash)
 
+
+# --- Cryptographic Email Link / Magic Link Authentication ---
+
+def generate_magic_link_token() -> str:
+    """Generates a high-entropy URL-safe cryptographic token (32 bytes) for email link authentication."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_magic_link_token(token: str) -> str:
+    """Hashes a magic link token with HMAC-SHA256 salted by the application SECRET_KEY."""
+    salt = settings.SECRET_KEY.encode("utf-8")
+    msg = f"magic_link:{token.strip()}".encode("utf-8")
+    return hmac.new(salt, msg, hashlib.sha256).hexdigest()
+
+
+def verify_magic_link_token(token: str, expected_hash: str) -> bool:
+    """Verifies a magic link token using constant-time comparison against expected HMAC-SHA256 hash."""
+    if not token or not expected_hash:
+        return False
+    actual_hash = hash_magic_link_token(token)
+    return hmac.compare_digest(actual_hash, expected_hash)
+
+

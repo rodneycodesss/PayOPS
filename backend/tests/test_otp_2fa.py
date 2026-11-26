@@ -154,3 +154,85 @@ async def test_login_2fa_otp_flow(client: AsyncClient, tenant_a: dict):
     assert direct_login.status_code == 200
     assert direct_login.json()["access_token"] is not None
     assert direct_login.json()["mfa_required"] is False
+
+
+@pytest.mark.asyncio
+async def test_email_link_login_flows(client: AsyncClient, tenant_a: dict):
+    """
+    Verifies email link verification for logins:
+    1. Direct passwordless magic link request & verification
+    2. Replay protection on used magic link token
+    3. 2FA one-click email verification link approval
+    """
+    email = "alice@alpha.co.ke"
+
+    # --- Part 1: Passwordless Magic Link Flow ---
+    magic_req = await client.post("/api/v1/auth/magic-link/request", json={"email": email})
+    assert magic_req.status_code == 200, magic_req.text
+    magic_data = magic_req.json()
+    assert magic_data["email"] == email
+    assert "secure sign-in link has been sent" in magic_data["message"]
+    assert magic_data["dev_link"] is not None
+
+    dev_link = magic_data["dev_link"]
+    assert "token=" in dev_link
+    token = dev_link.split("token=")[1]
+    assert len(token) >= 16
+
+    # 1b. Verify with invalid token -> 401
+    bad_verify = await client.post(
+        "/api/v1/auth/verify-email-link",
+        json={"token": "invalid_fake_token_1234567890"}
+    )
+    assert bad_verify.status_code == 401
+
+    # 1c. Verify with valid token -> 200 OK with tokens
+    good_verify = await client.post(
+        "/api/v1/auth/verify-email-link",
+        json={"token": token}
+    )
+    assert good_verify.status_code == 200, good_verify.text
+    auth_data = good_verify.json()
+    assert auth_data["access_token"] is not None
+    assert auth_data["refresh_token"] is not None
+    assert auth_data["mfa_required"] is False
+
+    # 1d. Replay with used token must fail -> 401
+    replay_verify = await client.post(
+        "/api/v1/auth/verify-email-link",
+        json={"token": token}
+    )
+    assert replay_verify.status_code == 401
+
+    # --- Part 2: 2FA One-Click Email Link Verification Flow ---
+    headers = {"Authorization": f"Bearer {auth_data['access_token']}"}
+    # Enable 2FA
+    await client.post("/api/v1/auth/mfa/enable-email", headers=headers)
+
+    # Login with password
+    login_res = await client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "SecurePassword123!"}
+    )
+    assert login_res.status_code == 200
+    login_data = login_res.json()
+    assert login_data["mfa_required"] is True
+    assert login_data["dev_link"] is not None
+    assert "token=" in login_data["dev_link"]
+
+    two_fa_token = login_data["dev_link"].split("token=")[1]
+
+    # Verify 2FA via the email link endpoint
+    two_fa_verify = await client.post(
+        "/api/v1/auth/verify-email-link",
+        json={"token": two_fa_token}
+    )
+    assert two_fa_verify.status_code == 200, two_fa_verify.text
+    final_auth = two_fa_verify.json()
+    assert final_auth["access_token"] is not None
+    assert final_auth["refresh_token"] is not None
+
+    # Disable 2FA for cleanup
+    cleanup_headers = {"Authorization": f"Bearer {final_auth['access_token']}"}
+    await client.post("/api/v1/auth/mfa/disable", headers=cleanup_headers)
+

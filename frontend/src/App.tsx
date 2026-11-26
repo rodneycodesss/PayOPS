@@ -12,6 +12,7 @@ import { PricingPage } from './pages/PricingPage';
 import { EarlyAccessPage } from './pages/EarlyAccessPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { LoginPage } from './pages/LoginPage';
+import { VerifyLoginPage } from './pages/VerifyLoginPage';
 
 // App Dashboard Pages (Redesign Pages 4, 8, 9, 10 + Core)
 import { OverviewPage } from './pages/OverviewPage';
@@ -102,6 +103,8 @@ export const App: React.FC = () => {
             <Route path="/early-access" element={<EarlyAccessPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/verify-login" element={<VerifyLoginPage />} />
+            <Route path="/auth/verify-link" element={<VerifyLoginPage />} />
 
             {/* Dashboard Root with conditional rendering */}
             <Route path="/" element={<RootIndexRoute />}>

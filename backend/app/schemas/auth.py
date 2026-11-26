@@ -31,6 +31,23 @@ class TokenResponse(BaseModel):
     temp_token: Optional[str] = None  # Returned when MFA verification is pending
     delivery_channel: Optional[str] = None  # "email", "sms", "authenticator"
     dev_otp: Optional[str] = None  # Provided in dev/test environment for easy verification
+    dev_link: Optional[str] = None  # One-click email verification link in dev/test mode
+
+
+class MagicLinkRequest(BaseModel):
+    email: EmailStr
+
+
+class MagicLinkResponse(BaseModel):
+    message: str
+    email: str
+    expires_in: int = 900  # 15 minutes
+    dev_link: Optional[str] = None
+
+
+class VerifyEmailLinkRequest(BaseModel):
+    token: str = Field(..., min_length=16, description="URL-safe cryptographic email link token")
+
 
 
 class RegisterOtpResponse(BaseModel):

@@ -29,6 +29,8 @@ interface AuthContextType {
   login: (email: string, password: string, totpCode?: string) => Promise<any>;
   verifyLogin2fa: (tempToken: string, code: string) => Promise<any>;
   resendLogin2fa: (tempToken: string) => Promise<any>;
+  requestMagicLink: (email: string) => Promise<{ message: string; email: string; expires_in: number; dev_link?: string }>;
+  verifyEmailLink: (token: string) => Promise<any>;
   register: (payload: any) => Promise<any>;
   requestRegisterOtp: (payload: any) => Promise<any>;
   resendRegisterOtp: (email: string) => Promise<any>;
@@ -95,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       temp_token?: string;
       delivery_channel?: string;
       dev_otp?: string;
+      dev_link?: string;
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password, totp_code: totpCode }),
@@ -130,10 +133,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resendLogin2fa = async (tempToken: string) => {
-    return await apiRequest<{ message: string; dev_otp?: string }>('/auth/login/resend-otp', {
+    return await apiRequest<{ message: string; dev_otp?: string; dev_link?: string }>('/auth/login/resend-otp', {
       method: 'POST',
       body: JSON.stringify({ temp_token: tempToken }),
     });
+  };
+
+  const requestMagicLink = async (email: string) => {
+    return await apiRequest<{
+      message: string;
+      email: string;
+      expires_in: number;
+      dev_link?: string;
+    }>('/auth/magic-link/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  };
+
+  const verifyEmailLink = async (token: string) => {
+    const data = await apiRequest<{
+      access_token: string;
+      refresh_token: string;
+    }>('/auth/verify-email-link', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+
+    if (data.access_token && data.refresh_token) {
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      await fetchProfile();
+    }
+    return data;
   };
 
   const register = async (payload: any) => {
@@ -236,6 +268,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         verifyLogin2fa,
         resendLogin2fa,
+        requestMagicLink,
+        verifyEmailLink,
         register,
         requestRegisterOtp,
         resendRegisterOtp,

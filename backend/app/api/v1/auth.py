@@ -19,6 +19,9 @@ from app.schemas.auth import (
     MfaSetupResponse,
     MfaVerifyRequest,
     UserProfileResponse,
+    MagicLinkRequest,
+    MagicLinkResponse,
+    VerifyEmailLinkRequest,
 )
 from app.services.auth_service import AuthService
 from app.services.audit_service import AuditService
@@ -142,9 +145,10 @@ async def login(
 ):
     """
     Authenticates user via Argon2id password verification.
-    If 2FA is enabled, generates a 6-digit login OTP (or accepts TOTP) and returns mfa_required=True.
+    If 2FA is enabled, generates a 6-digit login OTP, sends a one-click login link to email,
+    and returns mfa_required=True.
     """
-    user, access_token, refresh_token, mfa_required, temp_token, dev_otp = await AuthService.authenticate_user(
+    user, access_token, refresh_token, mfa_required, temp_token, dev_otp, dev_link = await AuthService.authenticate_user(
         db=db,
         email=data.email,
         password=data.password,
@@ -157,11 +161,12 @@ async def login(
             access_token=None,
             refresh_token=None,
             token_type="Bearer",
-            expires_in=300,
+            expires_in=900,
             mfa_required=True,
             temp_token=temp_token,
             delivery_channel="email",
-            dev_otp=dev_otp
+            dev_otp=dev_otp,
+            dev_link=dev_link
         )
 
     return TokenResponse(
@@ -205,8 +210,8 @@ async def resend_login_2fa_otp(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ):
-    """Resends a fresh 6-digit 2FA login code to the user's email."""
-    message, dev_otp = await AuthService.resend_login_2fa(
+    """Resends a fresh 6-digit 2FA login code and one-click verification link to the user's email."""
+    message, dev_otp, dev_link = await AuthService.resend_login_2fa(
         db=db,
         temp_token=data.temp_token,
         request=request
@@ -214,8 +219,59 @@ async def resend_login_2fa_otp(
 
     return {
         "message": message,
-        "dev_otp": dev_otp
+        "dev_otp": dev_otp,
+        "dev_link": dev_link
     }
+
+
+@router.post("/magic-link/request", response_model=MagicLinkResponse)
+async def request_magic_link(
+    data: MagicLinkRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Initiates passwordless email link authentication.
+    Dispatches a secure, single-use signed verification link to the user's email.
+    """
+    message, email, expires_in, dev_link = await AuthService.request_magic_link_login(
+        db=db,
+        email=data.email,
+        request=request
+    )
+
+    return MagicLinkResponse(
+        message=message,
+        email=email,
+        expires_in=expires_in,
+        dev_link=dev_link
+    )
+
+
+@router.post("/verify-email-link", response_model=TokenResponse)
+async def verify_email_link(
+    data: VerifyEmailLinkRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verifies a cryptographic email login link token (supports passwordless magic links
+    and one-click 2FA login verification) and returns active JWT session tokens.
+    """
+    user, access_token, refresh_token = await AuthService.verify_email_link(
+        db=db,
+        token=data.token,
+        request=request
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="Bearer",
+        expires_in=1800,
+        mfa_required=False
+    )
+
 
 
 

@@ -106,6 +106,7 @@ class Settings(BaseSettings):
     SMTP_TLS: bool = False
     EMAIL_FROM: str = "no-reply@rodstartechdevs.co.ke"
     EMAIL_FROM_NAME: str = "Rodstar PayOps"
+    FRONTEND_URL: str = Field(default="http://localhost:5173", description="Frontend Base URL for email verification links")
 
     # Tuma API Payment Gateway Configuration (https://api.tuma.co.ke)
     TUMA_BASE_URL: str = Field(default="https://api.tuma.co.ke", description="Tuma API Base URL")

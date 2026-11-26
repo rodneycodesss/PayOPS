@@ -21,6 +21,9 @@ from app.core.security import (
     generate_otp_code,
     hash_otp_code,
     verify_otp_code,
+    generate_magic_link_token,
+    hash_magic_link_token,
+    verify_magic_link_token,
 )
 from app.models.tenants import Tenant
 from app.models.branches import Branch
@@ -30,6 +33,7 @@ from app.models.auth import RefreshToken, AuthOtp
 from app.models.accounting import ChartOfAccounts
 from app.models.tax import TaxConfiguration
 from app.services.audit_service import AuditService
+from app.services.email_service import EmailService, get_client_base_url
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)
@@ -590,10 +594,10 @@ class AuthService:
         password: str,
         totp_code: Optional[str] = None,
         request: Optional[Request] = None
-    ) -> Tuple[Optional[User], Optional[str], Optional[str], bool, Optional[str], Optional[str]]:
+    ) -> Tuple[Optional[User], Optional[str], Optional[str], bool, Optional[str], Optional[str], Optional[str]]:
         """
-        Authenticates user via Argon2id and optional TOTP / email OTP.
-        Returns: (user, access_token, refresh_token, mfa_required, temp_token, dev_otp)
+        Authenticates user via Argon2id and optional TOTP / email OTP / email verification link.
+        Returns: (user, access_token, refresh_token, mfa_required, temp_token, dev_otp, dev_link)
         """
         stmt = (
             select(User)
@@ -637,10 +641,10 @@ class AuthService:
                     user.id, user.tenant_id, ["mfa_pending"], []
                 )
 
-                # Invalidate any older login OTPs for this user
+                # Invalidate any older login OTPs & links for this user
                 st_old = select(AuthOtp).where(
                     AuthOtp.identifier == user.email.lower().strip(),
-                    AuthOtp.purpose == "LOGIN_2FA",
+                    AuthOtp.purpose.in_(["LOGIN_2FA", "LOGIN_2FA_LINK"]),
                     AuthOtp.is_used == False,
                 )
                 old_otps = (await db.execute(st_old)).scalars().all()
@@ -656,18 +660,45 @@ class AuthService:
                     code_hash=code_hash,
                     user_id=user.id,
                     tenant_id=user.tenant_id,
-                    expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+                    expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
                     attempts=0,
                     max_attempts=5,
                     is_used=False
                 )
                 db.add(otp_record)
+
+                raw_link_token = generate_magic_link_token()
+                link_hash = hash_magic_link_token(raw_link_token)
+
+                link_record = AuthOtp(
+                    identifier=user.email.lower().strip(),
+                    purpose="LOGIN_2FA_LINK",
+                    code_hash=link_hash,
+                    user_id=user.id,
+                    tenant_id=user.tenant_id,
+                    expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+                    attempts=0,
+                    max_attempts=3,
+                    is_used=False
+                )
+                db.add(link_record)
                 await db.commit()
 
-                logger.info(f"[2FA LOGIN OTP] Code for {user.email}: {raw_code}")
+                client_base = get_client_base_url(request)
+                verification_link = f"{client_base}/verify-login?token={raw_link_token}"
+
+                await EmailService.send_login_verification_link(
+                    to_email=user.email,
+                    verification_link=verification_link,
+                    otp_code=raw_code,
+                    is_2fa=True
+                )
+
+                logger.info(f"[2FA LOGIN OTP] Code for {user.email}: {raw_code} | Link: {verification_link}")
 
                 dev_otp = raw_code if settings.APP_ENV != "production" else None
-                return user, None, None, True, temp_token, dev_otp
+                dev_link = verification_link if settings.APP_ENV != "production" else None
+                return user, None, None, True, temp_token, dev_otp, dev_link
 
             # Verify code: check TOTP secret (authenticator app) OR active LOGIN_2FA OTP
             is_valid = False
@@ -748,7 +779,7 @@ class AuthService:
         )
 
         await db.commit()
-        return user, access_token, refresh_token, False, None, None
+        return user, access_token, refresh_token, False, None, None, None
 
     @staticmethod
     async def verify_login_2fa(
@@ -868,9 +899,9 @@ class AuthService:
         db: AsyncSession,
         temp_token: str,
         request: Optional[Request] = None
-    ) -> Tuple[str, Optional[str]]:
+    ) -> Tuple[str, Optional[str], Optional[str]]:
         """
-        Generates and dispatches a fresh 2FA login OTP for a pending 2FA login session.
+        Generates and dispatches a fresh 2FA login OTP and one-click verification link.
         """
         try:
             payload = decode_token(temp_token)
@@ -889,10 +920,10 @@ class AuthService:
                 detail="User not found or account deactivated",
             )
 
-        # Invalidate old login OTPs
+        # Invalidate old login OTPs & links
         st_old = select(AuthOtp).where(
             AuthOtp.identifier == user.email.lower().strip(),
-            AuthOtp.purpose == "LOGIN_2FA",
+            AuthOtp.purpose.in_(["LOGIN_2FA", "LOGIN_2FA_LINK"]),
             AuthOtp.is_used == False,
         )
         old_otps = (await db.execute(st_old)).scalars().all()
@@ -908,18 +939,251 @@ class AuthService:
             code_hash=code_hash,
             user_id=user.id,
             tenant_id=user.tenant_id,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
             attempts=0,
             max_attempts=5,
             is_used=False
         )
         db.add(otp_record)
+
+        raw_link_token = generate_magic_link_token()
+        link_hash = hash_magic_link_token(raw_link_token)
+
+        link_record = AuthOtp(
+            identifier=user.email.lower().strip(),
+            purpose="LOGIN_2FA_LINK",
+            code_hash=link_hash,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+            attempts=0,
+            max_attempts=3,
+            is_used=False
+        )
+        db.add(link_record)
         await db.commit()
 
-        logger.info(f"[2FA LOGIN OTP RESEND] New code for {user.email}: {raw_code}")
+        client_base = get_client_base_url(request)
+        verification_link = f"{client_base}/verify-login?token={raw_link_token}"
+
+        await EmailService.send_login_verification_link(
+            to_email=user.email,
+            verification_link=verification_link,
+            otp_code=raw_code,
+            is_2fa=True
+        )
+
+        logger.info(f"[2FA LOGIN RESEND] New code for {user.email}: {raw_code} | Link: {verification_link}")
 
         dev_otp = raw_code if settings.APP_ENV != "production" else None
-        return f"New verification code sent to {user.email}", dev_otp
+        dev_link = verification_link if settings.APP_ENV != "production" else None
+        return f"New verification code and sign-in link sent to {user.email}", dev_otp, dev_link
+
+    @staticmethod
+    async def request_magic_link_login(
+        db: AsyncSession,
+        email: str,
+        request: Optional[Request] = None
+    ) -> Tuple[str, str, int, Optional[str]]:
+        """
+        Generates and dispatches a secure one-click magic link for email login.
+        Returns: (message, email, expires_in_seconds, dev_link)
+        """
+        normalized_email = email.lower().strip()
+        stmt = (
+            select(User)
+            .where(User.email == normalized_email)
+            .options(
+                selectinload(User.user_roles)
+                .selectinload(UserRole.role)
+                .selectinload(Role.role_permissions)
+                .selectinload(RolePermission.permission)
+            )
+        )
+        res = await db.execute(stmt)
+        user = res.scalar_one_or_none()
+
+        expires_in = 900  # 15 minutes
+        generic_message = f"If an account exists for {normalized_email}, a secure sign-in link has been sent to your email."
+
+        if not user or not user.is_active:
+            # Prevent user enumeration by returning generic message
+            return generic_message, normalized_email, expires_in, None
+
+        # Invalidate any old unused magic links for this user
+        st_old = select(AuthOtp).where(
+            AuthOtp.identifier == normalized_email,
+            AuthOtp.purpose == "LOGIN_MAGIC_LINK",
+            AuthOtp.is_used == False,
+        )
+        old_otps = (await db.execute(st_old)).scalars().all()
+        for old in old_otps:
+            old.is_used = True
+
+        raw_token = generate_magic_link_token()
+        code_hash = hash_magic_link_token(raw_token)
+
+        otp_record = AuthOtp(
+            identifier=normalized_email,
+            purpose="LOGIN_MAGIC_LINK",
+            code_hash=code_hash,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
+            attempts=0,
+            max_attempts=3,
+            is_used=False
+        )
+        db.add(otp_record)
+        await db.commit()
+
+        client_base = get_client_base_url(request)
+        verification_link = f"{client_base}/verify-login?token={raw_token}"
+
+        await EmailService.send_login_verification_link(
+            to_email=user.email,
+            verification_link=verification_link,
+            otp_code=None,
+            is_2fa=False,
+        )
+
+        logger.info(f"[MAGIC LINK GENERATED] Link for {user.email}: {verification_link}")
+
+        dev_link = verification_link if settings.APP_ENV != "production" else None
+        return f"A secure sign-in link has been sent to {user.email}.", normalized_email, expires_in, dev_link
+
+    @staticmethod
+    async def verify_email_link(
+        db: AsyncSession,
+        token: str,
+        request: Optional[Request] = None
+    ) -> Tuple[User, str, str]:
+        """
+        Validates a cryptographic email verification link token (supporting both passwordless
+        magic links and one-click 2FA login approval) and issues full JWT tokens.
+        """
+        if not token or len(token.strip()) < 16:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid token format."
+            )
+
+        token_hash = hash_magic_link_token(token)
+
+        st_otp = (
+            select(AuthOtp)
+            .where(
+                AuthOtp.code_hash == token_hash,
+                AuthOtp.purpose.in_(["LOGIN_MAGIC_LINK", "LOGIN_2FA_LINK"]),
+                AuthOtp.is_used == False,
+            )
+            .order_by(AuthOtp.created_at.desc())
+        )
+        otp_record = (await db.execute(st_otp)).scalars().first()
+
+        if not otp_record:
+            await AuditService.log_event(
+                db=db,
+                action="AUTH_LOGIN_FAILED",
+                resource_type="auth",
+                details={"reason": "Invalid or already used email verification link"},
+                request=request
+            )
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired login link. Please request a new one."
+            )
+
+        # Check expiration
+        now_utc = datetime.now(timezone.utc)
+        if now_utc > ensure_utc(otp_record.expires_at):
+            otp_record.is_used = True
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="This login link has expired. Please request a new link."
+            )
+
+        # Check max attempts
+        if otp_record.attempts >= otp_record.max_attempts:
+            otp_record.is_used = True
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Maximum verification attempts exceeded. Please request a new link."
+            )
+
+        # Fetch active user
+        stmt_user = (
+            select(User)
+            .where(User.id == otp_record.user_id)
+            .options(
+                selectinload(User.user_roles)
+                .selectinload(UserRole.role)
+                .selectinload(Role.role_permissions)
+                .selectinload(RolePermission.permission)
+            )
+        )
+        user = (await db.execute(stmt_user)).scalar_one_or_none()
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is deactivated or not found."
+            )
+
+        # Mark OTP as used
+        otp_record.is_used = True
+
+        # Invalidate any sibling pending 2FA OTPs for this user
+        st_siblings = select(AuthOtp).where(
+            AuthOtp.identifier == user.email.lower().strip(),
+            AuthOtp.purpose.in_(["LOGIN_2FA", "LOGIN_2FA_LINK"]),
+            AuthOtp.is_used == False,
+        )
+        siblings = (await db.execute(st_siblings)).scalars().all()
+        for sib in siblings:
+            sib.is_used = True
+
+        # Extract roles & permissions
+        roles = []
+        permissions = set()
+        for ur in user.user_roles:
+            roles.append(ur.role.name)
+            for rp in ur.role.role_permissions:
+                permissions.add(rp.permission.code)
+
+        # Issue tokens
+        access_token = create_access_token(user.id, user.tenant_id, roles, list(permissions))
+        refresh_token, jti, family_id, expires_at = create_refresh_token(user.id, user.tenant_id)
+
+        token_record = RefreshToken(
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            token_hash=hash_token(refresh_token),
+            jti=jti,
+            family_id=family_id,
+            is_revoked=False,
+            expires_at=expires_at
+        )
+        db.add(token_record)
+
+        user.last_login_at = now_utc
+
+        await AuditService.log_event(
+            db=db,
+            action="AUTH_LOGIN_SUCCESS",
+            resource_type="auth",
+            tenant_id=user.tenant_id,
+            actor_id=user.id,
+            actor_email=user.email,
+            details={"auth_method": "EMAIL_LINK_VERIFIED", "purpose": otp_record.purpose},
+            request=request
+        )
+
+        await db.commit()
+        return user, access_token, refresh_token
+
 
 
     @staticmethod

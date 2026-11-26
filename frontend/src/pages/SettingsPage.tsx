@@ -541,10 +541,10 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-slate-950">
-                      Two-Factor Authentication (2FA)
+                      Two-Factor Authentication (2FA) & Email Link Verification
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Enforce 6-digit OTP code verification during login
+                      Enforce 6-digit OTP code & one-click email verification link during login
                     </p>
                   </div>
                 </div>
@@ -561,8 +561,8 @@ export const SettingsPage: React.FC = () => {
 
               <p className="text-xs text-slate-600 leading-relaxed">
                 {user?.mfa_enabled
-                  ? 'Your account is securely protected. When signing in with your email and password, a 6-digit OTP code will be sent to your email or generated via your authenticator app.'
-                  : 'Add an extra layer of protection to your financial organization. When enabled, signing in requires both your password and a 6-digit security code.'}
+                  ? 'Your account is securely protected. When signing in with your email and password, a 6-digit security code and a one-click verification link are sent to your inbox. You can also sign in passwordless using direct email magic links.'
+                  : 'Add an extra layer of protection to your financial organization. When enabled, signing in requires two factors (your password plus a verified 6-digit OTP code or instant email verification link).'}
               </p>
 
               <button
