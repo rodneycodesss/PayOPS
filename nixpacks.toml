@@ -1,8 +1,11 @@
 [phases.setup]
-nixPkgs = ["python313", "postgresql"]
+nixPkgs = ["python313", "postgresql", "nodejs_20"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = [
+  "pip install -r requirements.txt",
+  "if [ -d 'frontend' ]; then cd frontend && npm install && npm run build && cd ..; fi"
+]
 
 [start]
 cmd = "sh start.sh"

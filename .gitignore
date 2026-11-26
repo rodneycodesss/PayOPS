@@ -9,7 +9,6 @@ backend/.venv/
 venv/
 env/
 *.egg-info/
-dist/
 build/
 
 # Testing & Coverage
@@ -20,8 +19,6 @@ htmlcov/
 # Node & Frontend
 frontend/node_modules/
 node_modules/
-frontend/dist/
-dist/
 *.tsbuildinfo
 .npm
 npm-debug.log*
