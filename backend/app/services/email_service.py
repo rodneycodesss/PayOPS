@@ -34,7 +34,7 @@ def get_client_base_url(request: Optional[Request] = None) -> str:
 class EmailService:
     @staticmethod
     def _send_sync(to_email: str, subject: str, html_body: str, text_body: str) -> bool:
-        """Sends an email synchronously using Python's standard smtplib."""
+        """Sends an email synchronously using Python's standard smtplib with Brevo / TLS support."""
         try:
             msg = EmailMessage()
             msg["Subject"] = subject
@@ -43,16 +43,26 @@ class EmailService:
             msg.set_content(text_body)
             msg.add_alternative(html_body, subtype="html")
 
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=3) as server:
-                if settings.SMTP_TLS:
+            smtp_host = str(settings.SMTP_HOST).strip()
+            smtp_port = int(settings.SMTP_PORT)
+            smtp_user = str(settings.SMTP_USER).strip() if settings.SMTP_USER else None
+            smtp_pass = str(settings.SMTP_PASSWORD).strip() if settings.SMTP_PASSWORD else None
+
+            if smtp_port == 465:
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10)
+            else:
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+                if settings.SMTP_TLS or smtp_port == 587:
                     server.starttls()
-                if settings.SMTP_USER and settings.SMTP_PASSWORD:
-                    server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+
+            with server:
+                if smtp_user and smtp_pass:
+                    server.login(smtp_user, smtp_pass)
                 server.send_message(msg)
-                logger.info(f"[EMAIL DISPATCHED] Subject: '{subject}' to {to_email}")
+                logger.info(f"[EMAIL DISPATCHED VIA {smtp_host}] Subject: '{subject}' to {to_email}")
                 return True
         except Exception as e:
-            logger.info(f"[EMAIL NOTICE] Subject: '{subject}' to {to_email} (SMTP server {settings.SMTP_HOST}:{settings.SMTP_PORT} inactive): {e}")
+            logger.warning(f"[EMAIL SEND ERROR] Subject: '{subject}' to {to_email} via {settings.SMTP_HOST}:{settings.SMTP_PORT}: {e}")
             return False
 
     @classmethod
