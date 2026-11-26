@@ -782,6 +782,98 @@ class AuthService:
         return user, access_token, refresh_token, False, None, None, None
 
     @staticmethod
+    async def demo_login(
+        db: AsyncSession,
+        request: Optional[Request] = None
+    ) -> Tuple[User, str, str]:
+        """
+        One-click demo login for prospective clients and evaluators.
+        Instantly logs into the pre-seeded demo business without 2FA or passwords.
+        """
+        stmt = (
+            select(User)
+            .where(User.email == "rodney@rodstartechdevs.co.ke")
+            .options(
+                selectinload(User.user_roles)
+                .selectinload(UserRole.role)
+                .selectinload(Role.role_permissions)
+                .selectinload(RolePermission.permission)
+            )
+        )
+        res = await db.execute(stmt)
+        user = res.scalar_one_or_none()
+
+        if not user or not user.is_active:
+            # Fallback to the first active user
+            fallback_stmt = (
+                select(User)
+                .where(User.is_active.is_(True))
+                .options(
+                    selectinload(User.user_roles)
+                    .selectinload(UserRole.role)
+                    .selectinload(Role.role_permissions)
+                    .selectinload(RolePermission.permission)
+                )
+                .limit(1)
+            )
+            fallback_res = await db.execute(fallback_stmt)
+            user = fallback_res.scalar_one_or_none()
+
+        if not user:
+            # Self-healing auto-seed for demo account if none exists
+            _, user, access_token, refresh_token = await AuthService.register_tenant(
+                db=db,
+                business_name="Rodstar Tech Devs Ltd",
+                trading_name="Rodstar PayOps Demo",
+                kra_pin="P051234567Z",
+                full_name="Rodney Gilbert",
+                email="rodney@rodstartechdevs.co.ke",
+                password="SecureRodstar2026!",
+                phone="+254712345678",
+                request=request
+            )
+            return user, access_token, refresh_token
+
+        # Extract roles and permissions
+        roles = []
+        permissions = set()
+        for ur in user.user_roles:
+            roles.append(ur.role.name)
+            for rp in ur.role.role_permissions:
+                permissions.add(rp.permission.code)
+
+        # Issue tokens
+        access_token = create_access_token(user.id, user.tenant_id, roles, list(permissions))
+        refresh_token, jti, family_id, expires_at = create_refresh_token(user.id, user.tenant_id)
+
+        token_record = RefreshToken(
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            token_hash=hash_token(refresh_token),
+            jti=jti,
+            family_id=family_id,
+            is_revoked=False,
+            expires_at=expires_at
+        )
+        db.add(token_record)
+
+        user.last_login_at = datetime.now(timezone.utc)
+
+        await AuditService.log_event(
+            db=db,
+            action="AUTH_DEMO_LOGIN",
+            resource_type="auth",
+            tenant_id=user.tenant_id,
+            actor_id=user.id,
+            actor_email=user.email,
+            details={"demo": True},
+            request=request
+        )
+
+        await db.commit()
+        return user, access_token, refresh_token
+
+    @staticmethod
     async def verify_login_2fa(
         db: AsyncSession,
         temp_token: str,

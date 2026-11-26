@@ -6,8 +6,8 @@ import { Logo } from '../components/Logo';
 
 export const LoginPage: React.FC = () => {
   const [authMode, setAuthMode] = useState<'password' | 'magic_link'>('password');
-  const [email, setEmail] = useState('rodney@rodstartechdevs.co.ke');
-  const [password, setPassword] = useState('SecureRodstar2026!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [mfaRequired, setMfaRequired] = useState(false);
   const [tempToken, setTempToken] = useState<string | null>(null);
@@ -214,17 +214,6 @@ export const LoginPage: React.FC = () => {
                 >
                   Email Sign-In Link
                 </button>
-              </div>
-
-              {/* Public Test Account Pre-filled notice */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start space-x-2 text-xs text-slate-700">
-                <ShieldCheck className="w-4 h-4 text-[#16A6D9] shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold text-slate-900">Public Test Account (2FA Active):</span>
-                  <div className="font-mono text-[11px] text-slate-600 mt-0.5">
-                    rodney@rodstartechdevs.co.ke / SecureRodstar2026!
-                  </div>
-                </div>
               </div>
 
               {error && (

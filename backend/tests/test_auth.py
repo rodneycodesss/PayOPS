@@ -96,3 +96,25 @@ async def test_register_login_refresh_revoke_flow(client: AsyncClient):
         json={"refresh_token": initial_refresh}
     )
     assert logout_res.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_demo_login_flow(client: AsyncClient):
+    """Verify that public 1-click demo login grants immediate access to the demo tenant."""
+    demo_res = await client.post("/api/v1/auth/demo-login")
+    assert demo_res.status_code == 200, demo_res.text
+    demo_data = demo_res.json()
+    assert "access_token" in demo_data
+    assert "refresh_token" in demo_data
+    assert demo_data["mfa_required"] is False
+
+    # Check profile
+    me_res = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {demo_data['access_token']}"}
+    )
+    assert me_res.status_code == 200
+    me_data = me_res.json()
+    assert me_data["is_active"] is True
+    assert "roles" in me_data
+

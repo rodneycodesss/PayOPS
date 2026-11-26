@@ -27,6 +27,7 @@ interface AuthContextType {
   isLoading: boolean;
   isTestAccount: boolean;
   login: (email: string, password: string, totpCode?: string) => Promise<any>;
+  demoLogin: () => Promise<any>;
   verifyLogin2fa: (tempToken: string, code: string) => Promise<any>;
   resendLogin2fa: (tempToken: string) => Promise<any>;
   requestMagicLink: (email: string) => Promise<{ message: string; email: string; expires_in: number; dev_link?: string }>;
@@ -106,6 +107,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (data.mfa_required) {
       return data;
     }
+
+    if (data.access_token && data.refresh_token) {
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      await fetchProfile();
+    }
+    return data;
+  };
+
+  const demoLogin = async () => {
+    const data = await apiRequest<{
+      access_token: string;
+      refresh_token: string;
+    }>('/auth/demo-login', {
+      method: 'POST',
+    });
 
     if (data.access_token && data.refresh_token) {
       localStorage.setItem('access_token', data.access_token);
@@ -266,6 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isTestAccount,
         login,
+        demoLogin,
         verifyLogin2fa,
         resendLogin2fa,
         requestMagicLink,

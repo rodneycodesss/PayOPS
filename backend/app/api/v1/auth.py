@@ -178,6 +178,29 @@ async def login(
     )
 
 
+@router.post("/demo-login", response_model=TokenResponse)
+async def demo_login(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Public sandbox entrypoint: provides instant 1-click access to the demo tenant
+    without requiring 2FA or password authentication.
+    """
+    user, access_token, refresh_token = await AuthService.demo_login(
+        db=db,
+        request=request
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="Bearer",
+        expires_in=1800,
+        mfa_required=False
+    )
+
+
 @router.post("/login/verify-2fa", response_model=TokenResponse)
 async def verify_login_2fa(
     data: VerifyLogin2faRequest,
