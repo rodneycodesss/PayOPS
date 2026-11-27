@@ -8,7 +8,7 @@ if command -v python3 >/dev/null 2>&1; then
 fi
 
 echo "Running database migrations..."
-$PYTHON_CMD -m alembic upgrade head
+$PYTHON_CMD -m alembic upgrade head || echo "Warning: Alembic migration reported an issue or tables already exist. Proceeding to startup..."
 
 PORT="${PORT:-3000}"
 echo "Starting FastAPI server on port ${PORT}..."
